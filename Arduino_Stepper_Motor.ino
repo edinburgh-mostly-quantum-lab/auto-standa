@@ -1,3 +1,6 @@
+// RS Pro 5350401 Motor
+// step angle: 0.9°
+
 // map pins to pin numbers on board
 #define DIR_PIN 2
 #define STEP_PIN 3
@@ -34,16 +37,14 @@ void setup() {
     pinMode(DIR_PIN, OUTPUT);       // enable pin to control motor direction
     pinMode(STEP_PIN, OUTPUT);      // enable pin to control motor steps
 
+    digitalWrite(DIR_PIN, motorDirection);
+
     Serial.println(
         "Select option:\n"
-        "1. LED on\n"
-        "2. LED off\n"
-        "3. LED mode: steady\n"
-        "4. LED mode: flash\n"
-        "5. Motor on\n"
-        "6. Motor off\n"
-        "7. Motor direction: clockwise\n"
-        "8. Motor direction: counter-clockwise"
+        "1. Toggle LED on\n"
+        "2. Toggle LED flash\n"
+        "3. Toggle motor direction\n"
+        "4. Toggle motor"
     );
 }
 
@@ -52,29 +53,37 @@ void loop() {
         userInput = Serial.parseInt();
         switch (userInput)
         {
-        case 1:
-            enableLED = true;
+        case 1: // toggle LED
+            if (enableLED == true) {
+                enableLED = false;
+            }
+            else {
+                enableLED = true;
+            }
             break;
-        case 2:
-            enableLED = false;
+        case 2: // toggle LED flash
+            if (enableFlash == true) {
+                enableFlash = false;
+            }
+            else {
+                enableFlash = true;
+            }
             break;
-        case 3:
-            enableFlash = false;
+        case 3: // toggle motor direction
+            if (motorDirection == LOW) {
+                motorDirection = HIGH;
+            }
+            else {
+                motorDirection = LOW;
+            }
             break;
-        case 4:
-            enableFlash = true;
-            break;
-        case 5:
-            enableMotor = true;
-            break;
-        case 6:
-            enableMotor = false;
-            break;
-        case 7:
-            motorDirection = LOW;   // clockwise
-            break;
-        case 8:
-            motorDirection = HIGH;  // counter-clockwise
+        case 4: // toggle motor
+            if (enableMotor == true) {
+                enableMotor = false;
+            }
+            else {
+                enableMotor = true;
+            }
             break;
         default:
             Serial.println("Error: Please enter a valid input");
@@ -82,66 +91,72 @@ void loop() {
     }
 
     LED(1000); // if LED and flash enabled, LED will flash every second
-    // motor(45); // rotate motor every 45 microseconds
-    motorAcc(130,200);
+    // motorAngle(10);
+    // motorAcc(20,100);
+    digitalWrite(DIR_PIN, motorDirection);
+    motor(45);
 }
 
 void LED(int duration) {
     // takes milliseconds for input
-    static int ledState = LOW;
-    if (enableLED == true) {
-        static unsigned long chrono = millis();
-        if (millis() - chrono < duration) return;
-        chrono = millis();
-    
-        if (enableFlash == true) {     // enable flashing LED
-            if (ledState == HIGH) {
-                ledState = LOW;
+    static int ledState = HIGH;
+    {
+        if (enableLED == true) {
+
+            if (enableFlash == true) {
+                // time keeping
+                static unsigned long chrono = millis();
+                if (millis() - chrono < duration) return;
+                chrono = millis();
+
+                if (ledState == HIGH) {
+                    ledState = LOW;
+                }
+                else {
+                    ledState = HIGH;
+                }
             }
             else {
                 ledState = HIGH;
             }
-        } 
-        else{
-            ledState = HIGH;        // enable LED
         }
+        else {
+            ledState = LOW; // turns off LED if enableLED == flase
+        }
+        digitalWrite(LED_BUILTIN, ledState);
     }
-    else {
-        ledState = LOW;             // disable LED
-    }
-    digitalWrite(LED_BUILTIN, ledState);
+}
+
+void motorDir() {
+
 }
 
 void motor(int duration) {
     // takes microseconds for input
     if (enableMotor == true) {
-        static bool high = true;
+        static int motorState = HIGH;
 
-        digitalWrite(DIR_PIN, motorDirection);
-
+        // time keeping
         static unsigned long chrono = micros();
         if (micros() - chrono < duration) return;
         chrono = micros();
 
-
-        if (high == true) {
-            digitalWrite(STEP_PIN, HIGH);
-            high = false;
+        // alternate between LOW and HIGH for driving motor
+        if (motorState == HIGH) {
+            motorState = LOW;
         }
         else {
-            digitalWrite(STEP_PIN, LOW);
-            high = true;
+            motorState = HIGH;
         }
+        digitalWrite(STEP_PIN, motorState);
     }
 }
 
 void motorAcc(int minDuration, int maxDuration) {
     // takes microseconds for input
     if (enableMotor == true) {
-        static bool high = true; // alternated between HIGH and LOW for driving motor
+        static int motorState = HIGH;
         static int cycle = 200; // cycle resets and duration decreases when cycle = 0
-
-        digitalWrite(DIR_PIN, motorDirection);
 
         static unsigned long duration = maxDuration;
 
@@ -150,22 +165,21 @@ void motorAcc(int minDuration, int maxDuration) {
         if (micros() - chrono < duration) return;
         chrono = micros();
 
-        if (high == true) {
-            digitalWrite(STEP_PIN, HIGH);
-            high = false;
+        // alternate between LOW and HIGH for driving motor
+        if (motorState == HIGH) {
+            motorState = LOW;
         }
         else {
-            digitalWrite(STEP_PIN, LOW);
-            high = true;
+            motorState = HIGH;
 
             cycle--;
             if (cycle <= 0 ) {
                 cycle = 200;
-                Serial << "duration: " << duration << '\n';
                 if (duration > minDuration) {
                     duration--;
                 }
             }
         }
+        digitalWrite(STEP_PIN, motorState);
     }
 }
