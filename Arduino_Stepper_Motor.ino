@@ -2,6 +2,14 @@
 #define DIR_PIN 2
 #define STEP_PIN 3
 
+// for standard C++-like printing
+template <typename T>
+Print& operator<<(Print& printer, T value)
+{
+    printer.print(value);
+    return printer;
+}
+
 int userInput;
 
 // init LED control variables
@@ -9,10 +17,10 @@ bool enableLED;
 bool enableFlash;
 
 // init motor control variables
-bool enableMotor = true;
+bool enableMotor = false;
 int motorDirection = LOW;
 
-// void templateFunction(unsigned long duration) {
+// void templateFunction(int duration) {
 //     // time keeping to enable multitasking, change millis() to micros() for microsecond timing
 //     static unsigned long chrono = millis();
 //     if (millis() - chrono < duration) return;
@@ -74,18 +82,18 @@ void loop() {
     }
 
     LED(1000); // if LED and flash enabled, LED will flash every second
-    motor(45); // rotate motor every 45 microseconds
+    // motor(45); // rotate motor every 45 microseconds
+    motorAcc(130,200);
 }
 
-void LED(unsigned long duration) {
+void LED(int duration) {
     // takes milliseconds for input
-    static unsigned long chrono = millis();
-    if (millis() - chrono < duration) return;
-    chrono = millis();
-
     static int ledState = LOW;
-
     if (enableLED == true) {
+        static unsigned long chrono = millis();
+        if (millis() - chrono < duration) return;
+        chrono = millis();
+    
         if (enableFlash == true) {     // enable flashing LED
             if (ledState == HIGH) {
                 ledState = LOW;
@@ -104,16 +112,60 @@ void LED(unsigned long duration) {
     digitalWrite(LED_BUILTIN, ledState);
 }
 
-void motor(unsigned long duration) {
+void motor(int duration) {
     // takes microseconds for input
-    static unsigned long chrono = micros();
-    if (micros() - chrono < duration) return;
-    chrono = micros();
-
     if (enableMotor == true) {
+        static bool high = true;
+
         digitalWrite(DIR_PIN, motorDirection);
 
-        digitalWrite(STEP_PIN, LOW);
-        digitalWrite(STEP_PIN, HIGH);
+        static unsigned long chrono = micros();
+        if (micros() - chrono < duration) return;
+        chrono = micros();
+
+
+        if (high == true) {
+            digitalWrite(STEP_PIN, HIGH);
+            high = false;
+        }
+        else {
+            digitalWrite(STEP_PIN, LOW);
+            high = true;
+        }
+    }
+}
+
+void motorAcc(int minDuration, int maxDuration) {
+    // takes microseconds for input
+    if (enableMotor == true) {
+        static bool high = true; // alternated between HIGH and LOW for driving motor
+        static int cycle = 200; // cycle resets and duration decreases when cycle = 0
+
+        digitalWrite(DIR_PIN, motorDirection);
+
+        static unsigned long duration = maxDuration;
+
+        // time keeping
+        static unsigned long chrono = micros();
+        if (micros() - chrono < duration) return;
+        chrono = micros();
+
+        if (high == true) {
+            digitalWrite(STEP_PIN, HIGH);
+            high = false;
+        }
+        else {
+            digitalWrite(STEP_PIN, LOW);
+            high = true;
+
+            cycle--;
+            if (cycle <= 0 ) {
+                cycle = 200;
+                Serial << "duration: " << duration << '\n';
+                if (duration > minDuration) {
+                    duration--;
+                }
+            }
+        }
     }
 }
