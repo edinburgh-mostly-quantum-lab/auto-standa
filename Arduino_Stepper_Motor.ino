@@ -9,8 +9,16 @@ bool enableLED;
 bool enableFlash;
 
 // init motor control variables
-bool enableMotor;
+bool enableMotor = true;
 int motorDirection = LOW;
+
+// void templateFunction(unsigned long duration) {
+//     // time keeping to enable multitasking, change millis() to micros() for microsecond timing
+//     static unsigned long chrono = millis();
+//     if (millis() - chrono < duration) return;
+//     chrono = millis();
+//     // main function body here //
+// }
 
 void setup() {
     Serial.begin(115200);           // init serial for communication with board
@@ -37,22 +45,22 @@ void loop() {
         switch (userInput)
         {
         case 1:
-            enableLED = 1;
+            enableLED = true;
             break;
         case 2:
-            enableLED = 0;
+            enableLED = false;
             break;
         case 3:
-            enableFlash = 0;
+            enableFlash = false;
             break;
         case 4:
-            enableFlash = 1;
+            enableFlash = true;
             break;
         case 5:
-            enableMotor = 1;
+            enableMotor = true;
             break;
         case 6:
-            enableMotor = 0;
+            enableMotor = false;
             break;
         case 7:
             motorDirection = LOW;   // clockwise
@@ -77,8 +85,8 @@ void LED(unsigned long duration) {
 
     static int ledState = LOW;
 
-    if (enableLED == 1) {
-        if (enableFlash == 1) {     // enable flashing LED
+    if (enableLED == true) {
+        if (enableFlash == true) {     // enable flashing LED
             if (ledState == HIGH) {
                 ledState = LOW;
             }
@@ -102,19 +110,10 @@ void motor(unsigned long duration) {
     if (micros() - chrono < duration) return;
     chrono = micros();
 
-    if (enableMotor == 1) {
+    if (enableMotor == true) {
         digitalWrite(DIR_PIN, motorDirection);
 
         digitalWrite(STEP_PIN, LOW);
         digitalWrite(STEP_PIN, HIGH);
     }
 }
-
-// void templateFunction(unsigned long duration) {
-//     // time keeping to enable multitasking, change millis() to micros() for microsecond timing
-//     static unsigned long chrono = millis();
-//     if (millis() - chrono < duration) return;
-//     chrono = millis();
-
-//     // main function body here //
-// }

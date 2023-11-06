@@ -1,5 +1,5 @@
 {
     "sketch": "Arduino_Stepper_Motor.ino",
     "board": "arduino:avr:uno",
-    "port": "/dev/ttyUSB0"
+    "port": "/dev/ttyACM0"
 }
