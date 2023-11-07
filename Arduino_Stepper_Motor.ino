@@ -118,8 +118,7 @@ void loop() {
     }
 
     LED(1000); // if LED and flash enabled, LED will flash every second
-    // motor(45);
-    motorAcc(45,200);
+    motor(45,200);
 }
 
 void LED(int duration) {
@@ -172,7 +171,7 @@ void LED(int duration) {
 //     }
 // }
 
-void motorAcc(int minDuration, int maxDuration) {
+void motor(int minDuration, int maxDuration) {
     // takes microseconds for input
     static unsigned long duration = maxDuration;
     if (reset == true) {
@@ -195,7 +194,7 @@ void motorAcc(int minDuration, int maxDuration) {
             else {
                 motorState = HIGH;
 
-                if (motorMode == 2) {
+                if (motorMode == 2) { // acceleration mode
                     cycle--;
                     if (cycle <= 0 ) {
                         cycle = 200;
