@@ -42,8 +42,8 @@ void setup() {
 
     Serial.println(
         "Select option:\n"
-        // "1. Toggle LED on\n"
-        // "2. Toggle LED flash\n"
+        "1. Toggle LED on\n"
+        "2. Toggle LED flash\n"
         "3. Turn off motor\n"
         "4. Toggle motor direction\n"
         "5. Enable motor: constant velocity\n"
@@ -59,22 +59,22 @@ void loop() {
         userInput = Serial.parseInt();
         switch (userInput)
         {
-        // case 1: // toggle LED
-        //     if (enableLED == true) {
-        //         enableLED = false;
-        //     }
-        //     else {
-        //         enableLED = true;
-        //     }
-        //     break;
-        // case 2: // toggle LED flash
-        //     if (enableFlash == true) {
-        //         enableFlash = false;
-        //     }
-        //     else {
-        //         enableFlash = true;
-        //     }
-        //     break;
+        case 1: // toggle LED
+            if (enableLED == true) {
+                enableLED = false;
+            }
+            else {
+                enableLED = true;
+            }
+            break;
+        case 2: // toggle LED flash
+            if (enableFlash == true) {
+                enableFlash = false;
+            }
+            else {
+                enableFlash = true;
+            }
+            break;
         case 3: // toggle motor
             if (motorMode != 0) {
                 motorMode = 0;
@@ -117,60 +117,60 @@ void loop() {
         }
     }
 
-    // LED(1000); // if LED and flash enabled, LED will flash every second
-    motor(45);
+    LED(1000); // if LED and flash enabled, LED will flash every second
+    // motor(45);
     motorAcc(45,200);
 }
 
-// void LED(int duration) {
-//     // takes milliseconds for input
-//     static int ledState = HIGH;
-//     {
-//         if (enableLED == true) {
-//             if (enableFlash == true) {
-//                 // time keeping
-//                 static unsigned long chrono = millis();
-//                 if (millis() - chrono < duration) return;
-//                 chrono = millis();
+void LED(int duration) {
+    // takes milliseconds for input
+    static int ledState = HIGH;
+    {
+        if (enableLED == true) {
+            if (enableFlash == true) {
+                // time keeping
+                static unsigned long chrono = millis();
+                if (millis() - chrono < duration) return;
+                chrono = millis();
 
-//                 if (ledState == HIGH) {
-//                     ledState = LOW;
-//                 }
-//                 else {
-//                     ledState = HIGH;
-//                 }
-//             }
-//             else {
-//                 ledState = HIGH;
-//             }
-//         }
-//         else {
-//             ledState = LOW; // turns off LED if enableLED == flase
-//         }
-//         digitalWrite(LED_BUILTIN, ledState);
-//     }
-// }
-
-void motor(int duration) {
-    // takes microseconds for input
-    if (motorMode == 1) {
-        static int motorState = HIGH;
-
-        // time keeping
-        static unsigned long chrono = micros();
-        if (micros() - chrono < duration) return;
-        chrono = micros();
-
-        // alternate between LOW and HIGH for driving motor
-        if (motorState == HIGH) {
-            motorState = LOW;
+                if (ledState == HIGH) {
+                    ledState = LOW;
+                }
+                else {
+                    ledState = HIGH;
+                }
+            }
+            else {
+                ledState = HIGH;
+            }
         }
         else {
-            motorState = HIGH;
+            ledState = LOW; // turns off LED if enableLED == flase
         }
-        digitalWrite(STEP_PIN, motorState);
+        digitalWrite(LED_BUILTIN, ledState);
     }
 }
+
+// void motor(int duration) {
+//     // takes microseconds for input
+//     if (motorMode == 1) {
+//         static int motorState = HIGH;
+
+//         // time keeping
+//         static unsigned long chrono = micros();
+//         if (micros() - chrono < duration) return;
+//         chrono = micros();
+
+//         // alternate between LOW and HIGH for driving motor
+//         if (motorState == HIGH) {
+//             motorState = LOW;
+//         }
+//         else {
+//             motorState = HIGH;
+//         }
+//         digitalWrite(STEP_PIN, motorState);
+//     }
+// }
 
 void motorAcc(int minDuration, int maxDuration) {
     // takes microseconds for input
@@ -179,7 +179,7 @@ void motorAcc(int minDuration, int maxDuration) {
         duration = maxDuration;
     }
     else {
-        if (motorMode == 2) {
+        if (motorMode == 1 || motorMode == 2) {
             static int motorState = HIGH;
             static int cycle = 200; // cycle resets and duration decreases when cycle = 0
 
@@ -195,11 +195,13 @@ void motorAcc(int minDuration, int maxDuration) {
             else {
                 motorState = HIGH;
 
-                cycle--;
-                if (cycle <= 0 ) {
-                    cycle = 200;
-                    if (duration > minDuration) {
-                        duration--;
+                if (motorMode == 2) {
+                    cycle--;
+                    if (cycle <= 0 ) {
+                        cycle = 200;
+                        if (duration > minDuration) {
+                            duration--;
+                        }
                     }
                 }
             }
