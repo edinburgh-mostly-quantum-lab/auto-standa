@@ -16,8 +16,8 @@ Print& operator<<(Print& printer, T value)
 int userInput;
 
 // init LED control variables
-bool enableLED;
-bool enableFlash;
+bool enableLED = false;
+bool enableFlash = false;
 
 // init motor control variables
 int motorMode;
@@ -52,34 +52,23 @@ void setup() {
 }
 
 void loop() {
-    if (reset == true) {
-        reset = false;
-    }
+    reset = false;
     if (Serial.available()) {
         userInput = Serial.parseInt();
         switch (userInput)
         {
         case 1: // toggle LED
-            if (enableLED == true) {
-                enableLED = false;
-            }
-            else {
-                enableLED = true;
-            }
+            enableLED = !enableLED;
             break;
+
         case 2: // toggle LED flash
-            if (enableFlash == true) {
-                enableFlash = false;
-            }
-            else {
-                enableFlash = true;
-            }
+            enableFlash = !enableFlash;
             break;
+
         case 3: // toggle motor
-            if (motorMode != 0) {
-                motorMode = 0;
-            }
+            motorMode = 0;
             break;
+
         case 4: // toggle motor direction
             reset = true;
             switch (motorMode)
@@ -101,17 +90,16 @@ void loop() {
             }
             digitalWrite(DIR_PIN, motorDirection);
             break;
+
         case 5: // motor with constant velocity
-            if (motorMode != 1) {
-                motorMode = 1;
-            }
+            motorMode = 1;
             break;
+
         case 6: // motor with accelerating velocity
             reset = true;
-            if (motorMode != 2) {
-                motorMode = 2;
-            }
+            motorMode = 2;
             break;
+
         default:
             Serial.println("Error: Please enter a valid input");
         }
@@ -149,27 +137,6 @@ void LED(int duration) {
         digitalWrite(LED_BUILTIN, ledState);
     }
 }
-
-// void motor(int duration) {
-//     // takes microseconds for input
-//     if (motorMode == 1) {
-//         static int motorState = HIGH;
-
-//         // time keeping
-//         static unsigned long chrono = micros();
-//         if (micros() - chrono < duration) return;
-//         chrono = micros();
-
-//         // alternate between LOW and HIGH for driving motor
-//         if (motorState == HIGH) {
-//             motorState = LOW;
-//         }
-//         else {
-//             motorState = HIGH;
-//         }
-//         digitalWrite(STEP_PIN, motorState);
-//     }
-// }
 
 void motor(int minDuration, int maxDuration) {
     // takes microseconds for input
