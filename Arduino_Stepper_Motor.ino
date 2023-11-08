@@ -30,6 +30,8 @@ bool reset;
 //     // main function body here //
 // }
 
+void motorNew(int motorMode, int maxDuration, int optional = 0);
+
 void setup() {
     Serial.begin(115200);           // init serial for communication with board
     pinMode(LED_BUILTIN, OUTPUT);   // enable built-in LED
@@ -38,26 +40,110 @@ void setup() {
 
     digitalWrite(DIR_PIN, motorDirection);
 
-    Serial.println(
-        "Select option:\n"
-        "1. Toggle LED on\n"
-        "2. Toggle LED flash\n"
-        "3. Turn off motor\n"
-        "4. Toggle motor direction\n"
-        "5. Enable motor: constant velocity\n"
-        "6. Enable motor: accelerate"
-    );
+    // Serial.println(
+    //     "Select option:\n"
+    //     "1. Toggle LED on\n"
+    //     "2. Toggle LED flash\n"
+    //     "3. Turn off motor\n"
+    //     "4. Toggle motor direction\n"
+    //     "5. Enable motor: constant velocity\n"
+    //     "6. Enable motor: accelerate\n"
+    //     "7. Enable motor: step"
+    // );
 }
 
 void loop() {
-    reset = false;
-    if (Serial.available()) {
-        userInput();
+    // reset = false;
+    // if (Serial.available()) {
+    //     userInput();
+    // }
+
+    // LED(1000); // if LED and flash enabled, LED will flash every second
+    // motor(45,200);
+
+    motorNew(2, 200, 45);
+}
+
+void motorNew(int motorMode, int maxDuration, int optional) {
+    // time keeping
+    static unsigned long duration = maxDuration;
+    static unsigned long chrono = micros();
+    if (micros() - chrono < duration) return;
+    chrono = micros();
+
+    static int motorState = HIGH;
+
+    switch (motorMode)
+    {
+    case 1: // constant speed
+        motorState = 1 - motorState;
+        break;
+
+    case 2: // accelerating
+        motorState = 1 - motorState;
+        static int cycle = 200;
+        static int minDuration = optional;
+        cycle--;
+        if (cycle <= 0) {
+            cycle = 200;
+            if (duration > minDuration) {
+                duration--;
+            }
+        }
+        break;
+
+    case 3: // step
+        motorState = 1 - motorState;
+        static int initStep = optional;
+        static int stepCount = optional;
+        stepCount--;
+
+        if (stepCount <= 0) {
+            Serial.println("Steps complete");
+            motorMode = 0;
+        }
+        break;
+    
+    default:
+        motorState = LOW;
+        break;
     }
 
-    LED(1000); // if LED and flash enabled, LED will flash every second
-    motor(45,200);
+    digitalWrite(STEP_PIN, motorState);
+    Serial.println(duration);
 }
+
+// void motor(int minDuration, int maxDuration) {
+//     // takes microseconds for input
+//     static unsigned long duration = maxDuration;
+//     if (reset) {
+//         duration = maxDuration;
+//     }
+//     else if (motorMode >= 1 && motorMode <= 3) {
+//         static int motorState = HIGH;
+//         static int cycle = 200; // cycle resets and duration decreases when cycle = 0
+
+//         // time keeping
+//         static unsigned long chrono = micros();
+//         if (micros() - chrono < duration) return;
+//         chrono = micros();
+
+//         // alternate between LOW and HIGH for driving motor
+//         motorState = 1 - motorState;
+
+//         if (motorMode == 2) { // acceleration mode
+//             cycle--;
+//             if (cycle <= 0) {
+//                 cycle = 200;
+//                 if (duration > minDuration) {
+//                     duration--;
+//                 }
+//             }
+//         }
+//         digitalWrite(STEP_PIN, motorState);
+//     }
+// }
+
 
 void userInput() {
     int option = Serial.parseInt();
@@ -137,35 +223,4 @@ void LED(int duration) {
         ledState = LOW; // turns off LED if enableLED == flase
     }
     digitalWrite(LED_BUILTIN, ledState);
-}
-
-void motor(int minDuration, int maxDuration) {
-    // takes microseconds for input
-    static unsigned long duration = maxDuration;
-    if (reset) {
-        duration = maxDuration;
-    }
-    else if (motorMode == 1 || motorMode == 2) {
-        static int motorState = HIGH;
-        static int cycle = 200; // cycle resets and duration decreases when cycle = 0
-
-        // time keeping
-        static unsigned long chrono = micros();
-        if (micros() - chrono < duration) return;
-        chrono = micros();
-
-        // alternate between LOW and HIGH for driving motor
-        motorState = 1 - motorState;
-
-        if (motorMode == 2) { // acceleration mode
-            cycle--;
-            if (cycle <= 0 ) {
-                cycle = 200;
-                if (duration > minDuration) {
-                    duration--;
-                }
-            }
-        }
-        digitalWrite(STEP_PIN, motorState);
-    }
 }
