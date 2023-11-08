@@ -13,14 +13,12 @@ Print& operator<<(Print& printer, T value)
     return printer;
 }
 
-int userInput;
-
 // init LED control variables
 bool enableLED = false;
 bool enableFlash = false;
 
 // init motor control variables
-int motorMode;
+int motorMode = 1;
 int motorDirection = LOW;
 bool reset;
 
@@ -54,124 +52,120 @@ void setup() {
 void loop() {
     reset = false;
     if (Serial.available()) {
-        userInput = Serial.parseInt();
-        switch (userInput)
-        {
-        case 1: // toggle LED
-            enableLED = !enableLED;
-            break;
-
-        case 2: // toggle LED flash
-            enableFlash = !enableFlash;
-            break;
-
-        case 3: // toggle motor
-            motorMode = 0;
-            break;
-
-        case 4: // toggle motor direction
-            reset = true;
-            switch (motorMode)
-            {
-            case 1:
-                userInput = 5;
-                break;
-            case 2:
-                userInput = 6;
-                break;
-            default:
-                break;
-            }
-            if (motorDirection == LOW) {
-                motorDirection = HIGH;
-            }
-            else {
-                motorDirection = LOW;
-            }
-            digitalWrite(DIR_PIN, motorDirection);
-            break;
-
-        case 5: // motor with constant velocity
-            motorMode = 1;
-            break;
-
-        case 6: // motor with accelerating velocity
-            reset = true;
-            motorMode = 2;
-            break;
-
-        default:
-            Serial.println("Error: Please enter a valid input");
-        }
+        userInput();
     }
 
     LED(1000); // if LED and flash enabled, LED will flash every second
     motor(45,200);
 }
 
+void userInput() {
+    int option = Serial.parseInt();
+    switch (option)
+    {
+    case 1: // toggle LED
+        enableLED = !enableLED;
+        Serial << "LED state: " << enableLED << '\n';
+        break;
+
+    case 2: // toggle LED flash
+        enableFlash = !enableFlash;
+        Serial << "Flash state: " << enableFlash << '\n';
+        break;
+
+    case 3: // toggle motor
+        motorMode = 0;
+        Serial << "Motor state: " << motorMode << '\n';
+        break;
+
+    case 4: // toggle motor direction
+        // reset motor cycles and retain motorMode value
+        reset = true;
+        switch (motorMode)
+        {
+        case 1:
+            option = 5;
+            break;
+        case 2:
+            option = 6;
+            break;
+        default:
+            break;
+        }
+
+        // alternate between LOW and HIGH for motor direction
+        motorDirection = 1 - motorDirection;
+        digitalWrite(DIR_PIN, motorDirection);
+
+        Serial << "Motor direction: " << motorDirection << '\n';
+        break;
+
+    case 5: // motor with constant velocity
+        motorMode = 1;
+        Serial << "Motor state: " << motorMode << '\n';
+        break;
+
+    case 6: // motor with accelerating velocity
+        reset = true;
+        motorMode = 2;
+        Serial << "Motor state: " << motorMode << '\n';
+        break;
+
+    default:
+        Serial.println("Error: Please enter a valid input");
+    }
+}
+
 void LED(int duration) {
     // takes milliseconds for input
     static int ledState = HIGH;
-    {
-        if (enableLED == true) {
-            if (enableFlash == true) {
-                // time keeping
-                static unsigned long chrono = millis();
-                if (millis() - chrono < duration) return;
-                chrono = millis();
+    if (enableLED) {
+        if (enableFlash) {
+            // time keeping
+            static unsigned long chrono = millis();
+            if (millis() - chrono < duration) return;
+            chrono = millis();
 
-                if (ledState == HIGH) {
-                    ledState = LOW;
-                }
-                else {
-                    ledState = HIGH;
-                }
-            }
-            else {
-                ledState = HIGH;
-            }
+            // alternate between LOW and HIGH for enabling LED
+            ledState = 1 - ledState;
         }
         else {
-            ledState = LOW; // turns off LED if enableLED == flase
+            ledState = HIGH;
         }
-        digitalWrite(LED_BUILTIN, ledState);
     }
+    else {
+        ledState = LOW; // turns off LED if enableLED == flase
+    }
+    digitalWrite(LED_BUILTIN, ledState);
 }
 
 void motor(int minDuration, int maxDuration) {
     // takes microseconds for input
     static unsigned long duration = maxDuration;
-    if (reset == true) {
+    if (reset) {
         duration = maxDuration;
     }
-    else {
-        if (motorMode == 1 || motorMode == 2) {
-            static int motorState = HIGH;
-            static int cycle = 200; // cycle resets and duration decreases when cycle = 0
+    else if (motorMode == 1 || motorMode == 2) {
+        static int motorState = HIGH;
+        static int cycle = 200; // cycle resets and duration decreases when cycle = 0
 
-            // time keeping
-            static unsigned long chrono = micros();
-            if (micros() - chrono < duration) return;
-            chrono = micros();
+        // time keeping
+        static unsigned long chrono = micros();
+        if (micros() - chrono < duration) return;
+        chrono = micros();
 
-            // alternate between LOW and HIGH for driving motor
-            if (motorState == HIGH) {
-                motorState = LOW;
-            }
-            else {
-                motorState = HIGH;
+        // alternate between LOW and HIGH for driving motor
+        motorState = 1 - motorState;
 
-                if (motorMode == 2) { // acceleration mode
-                    cycle--;
-                    if (cycle <= 0 ) {
-                        cycle = 200;
-                        if (duration > minDuration) {
-                            duration--;
-                        }
-                    }
+        if (motorMode == 2) { // acceleration mode
+            cycle--;
+            if (cycle <= 0 ) {
+                cycle = 200;
+                if (duration > minDuration) {
+                    duration--;
                 }
             }
-            digitalWrite(STEP_PIN, motorState);
         }
+        digitalWrite(STEP_PIN, motorState);
     }
 }
