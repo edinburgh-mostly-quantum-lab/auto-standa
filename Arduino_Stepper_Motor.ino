@@ -62,7 +62,7 @@ void loop() {
     // motor(45,200);
 
     // motorNew(2,500,45);
-    motorNew(3, 100, 1200);
+    motorNew(2, 250, 45);
 }
 
 void motorNew(int motorMode, int maxDuration, unsigned long optional) {
@@ -88,7 +88,7 @@ void motorNew(int motorMode, int maxDuration, unsigned long optional) {
 
         if (cycle <= 0) {
             cycle = 200;
-            if (duration > minDuration && duration % 2 = 0) {
+            if (duration > minDuration) {
                 duration--;
             }
         }
