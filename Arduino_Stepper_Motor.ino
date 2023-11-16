@@ -13,14 +13,17 @@ Print& operator<<(Print& printer, T value)
 }
 
 // variables
-int motorMode = 1;
+int motorMode;
 int motorDirection = LOW;
 bool motorState = 0;
 bool ledState = 0;
-float revolutions = 2.5;
-uint16_t fullRev = 12800;
-uint64_t stepNum = fullRev * revolutions;
-double degNum = 360;
+float revolutions = 5.0;
+uint64_t fullRev = 12750;
+uint64_t stepNum = (uint64_t) fullRev * revolutions;
+int degNum = (int) 360 * revolutions;
+bool serial = true;
+bool showMenu = true;
+bool reset = false;
 
 // init Chrono objects for time keeping
 Chrono ledChrono;
@@ -29,33 +32,107 @@ Chrono motorAccChrono(Chrono::MICROS);
 Chrono motorStepChrono(Chrono::MICROS);
 
 void setup() {
-    // Serial.begin(115200);           // init serial for communication with board
+    // if (serial) {
+        Serial.begin(115200); // init serial for communication with board
+        delay(1);
+    // }
+
     pinMode(LED_BUILTIN, OUTPUT);   // init serial for communication with board
     pinMode(DIR_PIN, OUTPUT);       // enable pin to control motor direction
     pinMode(STEP_PIN, OUTPUT);      // enable pin to control motor steps
 
     digitalWrite(DIR_PIN, motorDirection);
     digitalWrite(LED_BUILTIN, ledState);
+
+    Serial.println(
+        "Select option:\n"
+        "1. Turn off motor\n"
+        "2. Toggle motor direction\n"
+        "3. Enable motor: constant velocity\n"
+        "4. Enable motor: accelerate\n"
+        "5. Enable motor: step"
+    );
 }
 
 void loop() {
-    // motorConst(50);
-    // motorAcc(50, 500);
-    motorStep(degToStep(degNum), 50);
-    // LED(1000);
+    reset = false;
+    if (Serial.available()) {
+        int option = Serial.parseInt();
+        switch (option)
+        {
+        case 1:
+            motorMode = 0;
+            break;
+
+        case 2:
+            motorDirection = 1 - motorDirection;
+            digitalWrite(DIR_PIN, motorDirection);
+            Serial << "Motor direction: " << motorDirection << '\n';
+            break;
+
+        case 3:
+            motorMode = 1;
+            break;
+
+        case 4:
+            motorMode = 2;
+            break;
+
+        case 5:
+            motorMode = 3;
+            break;
+        
+        default:
+            Serial.println("Error: Invalid input");
+            break;
+        }
+    }
+    motor(motorMode);
 }
 
 void LED(int duration) {
     if (ledChrono.hasPassed(duration)) {
         ledChrono.restart();
-        ledState = 1 - ledState;
+        ledState = 1 - ledState; // flip state
         digitalWrite(LED_BUILTIN, ledState);
     }
 }
 
+// class Motor() {
+//     public:
+//     void driveMotor()
+//     private:
+// }
+
 void driveMotor() {
-    motorState = 1 - motorState;
+    motorState = 1 - motorState; // flip state
     digitalWrite(STEP_PIN, motorState);
+}
+
+void motor(int motorMode) {
+    switch (motorMode)
+    {
+    case 0:
+        motorState = LOW;
+        digitalWrite(STEP_PIN, motorState);
+        break;
+
+    case 1:
+        motorConst(50);
+    break;
+
+    case 2:
+        motorAcc(50, 500);
+        break;
+
+    case 3:
+        motorStep(degToStep(degNum), 50);
+        break;
+    
+    default:
+        Serial.println("Error: Invalid mode for motor");
+        break;
+    }
 }
 
 void motorConst(int duration) {
@@ -85,14 +162,13 @@ void motorAcc(int minDuration, int maxDuration) {
     }
 }
 
-uint64_t degToStep(uint16_t deg) {
+uint64_t degToStep(int deg) {
     uint64_t steps = (fullRev * deg) / 360;
     return steps;
 }
 
 void motorStep(uint64_t steps, int duration) {
-    static uint64_t stepCount = steps;
-    // static uint64_t stepCount = (fullRev * deg) / 360;
+    static long double stepCount = steps;
     if (motorStepChrono.hasPassed(duration)) {
         motorStepChrono.restart();
 
@@ -101,5 +177,9 @@ void motorStep(uint64_t steps, int duration) {
             driveMotor();
             stepCount--;
         }
+        else if (stepCount == 0) {
+            motorMode = 0;
+        }
+        
     }
 }

@@ -20,7 +20,7 @@ bool reset;
 
 // void templateFunction(int duration) {
 //     // time keeping to enable multitasking, change millis() to micros() for microsecond timing
-//     static unsigned long chrono = millis();
+//     static uns\igned long chrono = millis();
 //     if (millis() - chrono < duration) return;
 //     chrono = millis();
 //     // main function body here //
