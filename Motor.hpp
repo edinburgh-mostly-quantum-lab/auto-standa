@@ -17,7 +17,10 @@ class Motor {
         void motorAcc(int minDuration, int maxDuration);
         void motorStep(uint64_t steps, int duration);
         void motorRevs(int revolutions);
-        void reset();
+        void resetFun();
+
+    private:
+        bool reset = false;
 
     private:
         uint64_t degToStep(int deg);

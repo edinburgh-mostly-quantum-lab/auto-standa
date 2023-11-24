@@ -39,25 +39,26 @@ void loop() {
         int option = Serial.parseInt();
         switch (option)
         {
-        case 1:
+        case 1: // turn motor off
             stepperMotor.motorMode = 0;
             break;
 
-        case 2:
+        case 2: // reverse motor direction
             stepperMotor.motorDirection = 1 - stepperMotor.motorDirection;
             digitalWrite(DIR_PIN, stepperMotor.motorDirection);
-            Serial << "Motor direction: " << stepperMotor.motorDirection << '\n';
+            stepperMotor.resetFun();
+            
             break;
 
-        case 3:
+        case 3: // drive motor with constant speed
             stepperMotor.motorMode = 1;
             break;
 
-        case 4:
+        case 4: // accelerate motor
             stepperMotor.motorMode = 2;
             break;
 
-        case 5:
+        case 5: // step motor
             stepperMotor.motorMode = 3;
             break;
         

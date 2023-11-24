@@ -24,21 +24,21 @@ void Motor::driveMotor() {
 void Motor::motor(int motorMode) {
     switch (motorMode)
     {
-    case 0:
+    case 0: // motor off
         motorState = LOW;
         digitalWrite(STEP_PIN, motorState);
         break;
 
-    case 1:
-        motorConst(50);
+    case 1: // motor constant speed
+        motorConst(100);
     break;
 
-    case 2:
+    case 2: // motor accelerate
         motorAcc(50, 500);
         break;
 
-    case 3:
-        motorStep(degToStep(degNum), 50);
+    case 3: // motor step in degrees
+        motorStep(degToStep(degNum), 100);
         break;
     
     default:
@@ -48,6 +48,7 @@ void Motor::motor(int motorMode) {
 }
 
 void Motor::motorConst(int duration) {
+    // chrono
     if (motorConstChrono.hasPassed(duration)) {
         motorConstChrono.restart();
 
@@ -58,6 +59,15 @@ void Motor::motorConst(int duration) {
 void Motor::motorAcc(int minDuration, int maxDuration) {
     static int duration = maxDuration;
     static int cycleAcc = 200;
+
+    // reset function state if direction changes
+    if (reset) {
+        duration = maxDuration;
+        cycleAcc = 200;
+        resetFun();
+    }
+
+    // chrono
     if (motorAccChrono.hasPassed(duration)) {
         motorAccChrono.restart();
 
@@ -81,6 +91,14 @@ uint64_t Motor::degToStep(int deg) {
 
 void Motor::motorStep(uint64_t steps, int duration) {
     static long double stepCount = steps;
+
+    // reset function state if direction changes
+    if (reset) {
+        stepCount = steps;
+        resetFun();
+    }
+
+    // chrono
     if (motorStepChrono.hasPassed(duration)) {
         motorStepChrono.restart();
 
@@ -91,6 +109,7 @@ void Motor::motorStep(uint64_t steps, int duration) {
         }
         else if (stepCount == 0) {
             motorMode = 0;
+            stepCount = steps;
         }
         
     }
@@ -100,6 +119,6 @@ void Motor::motorRevs(int revolutions) {
     
 }
 
-void Motor::reset() {
-
+void Motor::resetFun() {
+    reset != reset; // flip reset state
 }
