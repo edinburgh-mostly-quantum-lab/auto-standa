@@ -1,119 +1,71 @@
+#include "Motor.hpp"
+
 // map pins to pin numbers on board
 #define DIR_PIN 2
 #define STEP_PIN 3
 
-int userInput;
+// for standard C++-like printing
+template <typename T>
+Print& operator<<(Print& printer, T value)
+{
+    printer.print(value);
+    return printer;
+}
 
-// init LED control variables
-bool enableLED;
-bool enableFlash;
-
-// init motor control variables
-bool enableMotor = true;
-int motorDirection = LOW;
-
-// void templateFunction(unsigned long duration) {
-//     // time keeping to enable multitasking, change millis() to micros() for microsecond timing
-//     static unsigned long chrono = millis();
-//     if (millis() - chrono < duration) return;
-//     chrono = millis();
-//     // main function body here //
-// }
+Motor stepperMotor(12750);
 
 void setup() {
-    Serial.begin(115200);           // init serial for communication with board
-    pinMode(LED_BUILTIN, OUTPUT);   // enable built-in LED
+    Serial.begin(115200); // init serial for communication with board
+    delay(1);
+
+    pinMode(LED_BUILTIN, OUTPUT);   // init serial for communication with board
     pinMode(DIR_PIN, OUTPUT);       // enable pin to control motor direction
     pinMode(STEP_PIN, OUTPUT);      // enable pin to control motor steps
 
+    digitalWrite(DIR_PIN, stepperMotor.motorDirection);
+
     Serial.println(
         "Select option:\n"
-        "1. LED on\n"
-        "2. LED off\n"
-        "3. LED mode: steady\n"
-        "4. LED mode: flash\n"
-        "5. Motor on\n"
-        "6. Motor off\n"
-        "7. Motor direction: clockwise\n"
-        "8. Motor direction: counter-clockwise"
+        "1. Turn off motor\n"
+        "2. Toggle motor direction\n"
+        "3. Enable motor: constant velocity\n"
+        "4. Enable motor: accelerate\n"
+        "5. Enable motor: step"
     );
 }
 
 void loop() {
     if (Serial.available()) {
-        userInput = Serial.parseInt();
-        switch (userInput)
+        int option = Serial.parseInt();
+        switch (option)
         {
-        case 1:
-            enableLED = true;
+        case 1: // turn motor off
+            stepperMotor.motorMode = 0;
             break;
-        case 2:
-            enableLED = false;
+
+        case 2: // reverse motor direction
+            stepperMotor.motorDirection = 1 - stepperMotor.motorDirection;
+            digitalWrite(DIR_PIN, stepperMotor.motorDirection);
+            stepperMotor.resetFun();
+            
             break;
-        case 3:
-            enableFlash = false;
+
+        case 3: // drive motor with constant speed
+            stepperMotor.motorMode = 1;
             break;
-        case 4:
-            enableFlash = true;
+
+        case 4: // accelerate motor
+            stepperMotor.motorMode = 2;
             break;
-        case 5:
-            enableMotor = true;
+
+        case 5: // step motor
+            stepperMotor.motorMode = 3;
             break;
-        case 6:
-            enableMotor = false;
-            break;
-        case 7:
-            motorDirection = LOW;   // clockwise
-            break;
-        case 8:
-            motorDirection = HIGH;  // counter-clockwise
-            break;
+        
         default:
-            Serial.println("Error: Please enter a valid input");
+            Serial.println("Error: Invalid input");
+            break;
         }
     }
-
-    LED(1000); // if LED and flash enabled, LED will flash every second
-    motor(45); // rotate motor every 45 microseconds
-}
-
-void LED(unsigned long duration) {
-    // takes milliseconds for input
-    static unsigned long chrono = millis();
-    if (millis() - chrono < duration) return;
-    chrono = millis();
-
-    static int ledState = LOW;
-
-    if (enableLED == true) {
-        if (enableFlash == true) {     // enable flashing LED
-            if (ledState == HIGH) {
-                ledState = LOW;
-            }
-            else {
-                ledState = HIGH;
-            }
-        } 
-        else{
-            ledState = HIGH;        // enable LED
-        }
-    }
-    else {
-        ledState = LOW;             // disable LED
-    }
-    digitalWrite(LED_BUILTIN, ledState);
-}
-
-void motor(unsigned long duration) {
-    // takes microseconds for input
-    static unsigned long chrono = micros();
-    if (micros() - chrono < duration) return;
-    chrono = micros();
-
-    if (enableMotor == true) {
-        digitalWrite(DIR_PIN, motorDirection);
-
-        digitalWrite(STEP_PIN, LOW);
-        digitalWrite(STEP_PIN, HIGH);
-    }
+    stepperMotor.motor(stepperMotor.motorMode);
 }
