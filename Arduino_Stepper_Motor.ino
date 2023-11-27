@@ -41,25 +41,29 @@ void loop() {
         {
         case 1: // turn motor off
             stepperMotor.motorMode = 0;
+            stepperMotor.resetFun(true);
             break;
 
         case 2: // reverse motor direction
             stepperMotor.motorDirection = 1 - stepperMotor.motorDirection;
             digitalWrite(DIR_PIN, stepperMotor.motorDirection);
-            stepperMotor.resetFun();
+            stepperMotor.resetFun(true);
             
             break;
 
         case 3: // drive motor with constant speed
             stepperMotor.motorMode = 1;
+            stepperMotor.resetFun(true);
             break;
 
         case 4: // accelerate motor
             stepperMotor.motorMode = 2;
+            stepperMotor.resetFun(true);
             break;
 
         case 5: // step motor
             stepperMotor.motorMode = 3;
+            stepperMotor.resetFun(true);
             break;
         
         default:

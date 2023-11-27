@@ -64,7 +64,7 @@ void Motor::motorAcc(int minDuration, int maxDuration) {
     if (reset) {
         duration = maxDuration;
         cycleAcc = 200;
-        resetFun();
+        resetFun(false);
     }
 
     // chrono
@@ -95,7 +95,7 @@ void Motor::motorStep(uint64_t steps, int duration) {
     // reset function state if direction changes
     if (reset) {
         stepCount = steps;
-        resetFun();
+        resetFun(false);
     }
 
     // chrono
@@ -107,11 +107,6 @@ void Motor::motorStep(uint64_t steps, int duration) {
             Motor::driveMotor();
             stepCount--;
         }
-        else if (stepCount == 0) {
-            motorMode = 0;
-            stepCount = steps;
-        }
-        
     }
 }
 
@@ -119,6 +114,12 @@ void Motor::motorRevs(int revolutions) {
     
 }
 
-void Motor::resetFun() {
-    reset != reset; // flip reset state
+void Motor::resetFun(bool state) {
+    if (state == true) {
+        reset = true;
+    }
+    else
+    {
+        reset = false;
+    }
 }

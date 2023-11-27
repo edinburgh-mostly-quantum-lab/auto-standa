@@ -17,7 +17,7 @@ class Motor {
         void motorAcc(int minDuration, int maxDuration);
         void motorStep(uint64_t steps, int duration);
         void motorRevs(int revolutions);
-        void resetFun();
+        void resetFun(bool state);
 
     private:
         bool reset = false;
