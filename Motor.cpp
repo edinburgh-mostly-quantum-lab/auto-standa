@@ -38,7 +38,7 @@ void Motor::motor(int motorMode) {
         break;
 
     case 3: // motor step in degrees
-        motorStep(degToStep(degNum), 100);
+        motorAngle(180, 100);
         break;
     
     default:
@@ -89,12 +89,12 @@ uint64_t Motor::degToStep(int deg) {
     return steps;
 }
 
-void Motor::motorStep(uint64_t steps, int duration) {
-    static long double stepCount = steps;
+void Motor::motorAngle(uint16_t angle, int duration) {
+    static long double stepCount = degToStep(angle);
 
     // reset function state if direction changes
     if (reset) {
-        stepCount = steps;
+        stepCount = degToStep(angle);
         resetFun(false);
     }
 

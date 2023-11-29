@@ -15,7 +15,7 @@ class Motor {
         void motor(int motorMode);
         void motorConst(int duration);
         void motorAcc(int minDuration, int maxDuration);
-        void motorStep(uint64_t steps, int duration);
+        void motorAngle(uint16_t angle, int duration);
         void motorRevs(int revolutions);
         void resetFun(bool state);
 

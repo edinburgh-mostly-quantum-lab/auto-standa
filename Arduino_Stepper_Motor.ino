@@ -30,7 +30,7 @@ void setup() {
         "2. Toggle motor direction\n"
         "3. Enable motor: constant velocity\n"
         "4. Enable motor: accelerate\n"
-        "5. Enable motor: step"
+        "5. Enable motor: angle"
     );
 }
 
