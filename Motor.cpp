@@ -1,5 +1,4 @@
-#include "Motor.hpp"
-
+#include "Motor.h"
 #include "Chrono.h"
 //https://github.com/SofaPirate/Chrono
 
@@ -18,7 +17,7 @@ Motor::Motor(uint64_t x) {
 
 void Motor::driveMotor() {
     motorState = 1 - motorState; // flip state
-    digitalWrite(STEP_PIN, motorState);
+    digitalWriteFast(STEP_PIN, motorState);
 }
 
 void Motor::motor(int motorMode) {
@@ -26,7 +25,7 @@ void Motor::motor(int motorMode) {
     {
     case 0: // motor off
         motorState = LOW;
-        digitalWrite(STEP_PIN, motorState);
+        digitalWriteFast(STEP_PIN, motorState);
         break;
 
     case 1: // motor constant speed
@@ -38,13 +37,21 @@ void Motor::motor(int motorMode) {
         break;
 
     case 3: // motor step in degrees
-        motorAngle(180, 100);
+        motorAngle(180, 1, 100);
         break;
+
+    case 4: // satellite sweep
+        motorSatSweep(200);
     
     default:
         Serial.println("Error: Invalid mode for motor");
         break;
     }
+}
+
+void Motor::motorChangeDir() {
+    motorDirection = 1 - motorDirection;
+    digitalWriteFast(DIR_PIN, motorDirection);
 }
 
 void Motor::motorConst(int t_interval) {
@@ -89,12 +96,14 @@ uint64_t Motor::degToStep(int t_deg) {
     return steps;
 }
 
-void Motor::motorAngle(uint16_t t_angle, int t_interval) {
-    static long double stepCount = degToStep(t_angle);
+void Motor::motorAngle(uint16_t t_angle, int t_rotations, int t_interval) {
+    static int rotations = t_rotations;
+    static uint64_t steps = degToStep(t_angle);
 
     // reset function state if direction changes
     if (reset) {
-        stepCount = degToStep(t_angle);
+        steps = degToStep(t_angle);
+        rotations = t_rotations;
         resetFun(false);
     }
 
@@ -103,11 +112,28 @@ void Motor::motorAngle(uint16_t t_angle, int t_interval) {
         motorStepChrono.restart();
 
         // decreasing steps
-        if (stepCount > 0) {
+        if (steps > 0) {
             Motor::driveMotor();
-            stepCount--;
+            steps--;
         }
     }
+}
+
+void Motor::motorSatSweep(int t_seconds) {
+    static int count = 1;
+
+    if (reset) {
+        count = 1;
+        resetFun(false);
+    }
+
+    motorAngle(45, 1, 100);
+    motorChangeDir();
+    motorAngle(45, 1, 100);
+}
+
+void Motor::motorCalibrate() {
+
 }
 
 void Motor::resetFun(bool t_state) {

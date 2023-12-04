@@ -1,4 +1,4 @@
-#include "Motor.hpp"
+#include "Motor.h"
 
 // map pins to pin numbers on board
 #define DIR_PIN 2
@@ -12,7 +12,7 @@ Print& operator<<(Print& printer, T value)
     return printer;
 }
 
-Motor stepperMotor(12750);
+Motor stepperMotor(13520);
 
 void setup() {
     Serial.begin(115200); // init serial for communication with board
@@ -36,8 +36,7 @@ void loop() {
             break;
 
         case 2: // reverse motor direction
-            stepperMotor.motorDirection = 1 - stepperMotor.motorDirection;
-            digitalWrite(DIR_PIN, stepperMotor.motorDirection);
+            stepperMotor.motorChangeDir();
             stepperMotor.resetFun(true);
             break;
 
@@ -53,6 +52,11 @@ void loop() {
 
         case 5: // step motor
             stepperMotor.motorMode = 3;
+            stepperMotor.resetFun(true);
+            break;
+
+        case 6: // sat sweep profile
+            stepperMotor.motorMode = 4;
             stepperMotor.resetFun(true);
             break;
         
