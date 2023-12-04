@@ -10,6 +10,7 @@
 Chrono motorConstChrono(Chrono::MICROS);
 Chrono motorAccChrono(Chrono::MICROS);
 Chrono motorStepChrono(Chrono::MICROS);
+Chrono motorSatSweepChrono(Chrono::MICROS);
 
 Motor::Motor(uint64_t t_fullRevStep) {
     fullRevStep = t_fullRevStep;
@@ -39,9 +40,6 @@ void Motor::motor(int motorMode, int a, int b, int c) {
     case 3: // motor step in degrees
         motorStep(a, b, c);
         break;
-
-    case 4: // satellite sweep
-        motorSatSweep(200);
     
     default:
         Serial.println("Error: Invalid mode for motor");
@@ -92,7 +90,7 @@ void Motor::motorAcc(int t_minInterval, int t_maxInterval) {
 }
 
 uint64_t Motor::degToStep(int t_deg) {
-    uint64_t steps = (fullRev * t_deg) / 360;
+    uint64_t steps = (fullRevStep * t_deg) / 360;
     return steps;
 }
 
@@ -123,19 +121,6 @@ void Motor::motorStep(uint16_t t_angle, int t_count, int t_interval) {
             }
         }
     }
-}
-
-void Motor::motorSatSweep(int t_seconds) {
-    static int count = 1;
-
-    if (reset) {
-        count = 1;
-        resetFun(false);
-    }
-}
-
-void Motor::motorCalibrate() {
-
 }
 
 void Motor::resetFun(bool t_state) {
