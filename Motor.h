@@ -7,12 +7,16 @@ class Motor {
         int motorMode;
         int motorDirection = LOW;
         bool motorState = 0;
-        uint64_t fullRev;
+        uint64_t fullRevStep;
+
+        int a;
+        int b;
+        int c;
         
     public:
-        Motor(uint64_t x);
+        Motor(uint64_t t_fullRevStep);
         void driveMotor();
-        void motor(int motorMode);
+        void motor(int motorMode, int a = 0, int b = 0, int c = 0);
         void motorChangeDir();
         void motorConst(int t_interval);
         void motorAcc(int t_minInterval, int t_maxInterval);

@@ -11,8 +11,8 @@ Chrono motorConstChrono(Chrono::MICROS);
 Chrono motorAccChrono(Chrono::MICROS);
 Chrono motorStepChrono(Chrono::MICROS);
 
-Motor::Motor(uint64_t x) {
-    fullRev = x;
+Motor::Motor(uint64_t t_fullRevStep) {
+    fullRevStep = t_fullRevStep;
 }
 
 void Motor::driveMotor() {
@@ -20,7 +20,7 @@ void Motor::driveMotor() {
     digitalWriteFast(STEP_PIN, motorState);
 }
 
-void Motor::motor(int motorMode) {
+void Motor::motor(int motorMode, int a, int b, int c) {
     switch (motorMode)
     {
     case 0: // motor off
@@ -29,15 +29,15 @@ void Motor::motor(int motorMode) {
         break;
 
     case 1: // motor constant speed
-        motorConst(100);
+        motorConst(a);
         break;
 
     case 2: // motor accelerate
-        motorAcc(50, 500);
+        motorAcc(a, b);
         break;
 
     case 3: // motor step in degrees
-        motorStep(45, 2, 100);
+        motorStep(a, b, c);
         break;
 
     case 4: // satellite sweep

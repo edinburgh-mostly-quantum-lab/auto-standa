@@ -42,16 +42,22 @@ void loop() {
 
         case 3: // drive motor with constant speed
             stepperMotor.motorMode = 1;
+            stepperMotor.a = 100;
             stepperMotor.resetFun(true);
             break;
 
         case 4: // accelerate motor
             stepperMotor.motorMode = 2;
+            stepperMotor.a = 50;
+            stepperMotor.b = 500;
             stepperMotor.resetFun(true);
             break;
 
         case 5: // step motor
             stepperMotor.motorMode = 3;
+            stepperMotor.a = 45;
+            stepperMotor.b = 2;
+            stepperMotor.c = 100;
             stepperMotor.resetFun(true);
             break;
 
@@ -65,5 +71,5 @@ void loop() {
             break;
         }
     }
-    stepperMotor.motor(stepperMotor.motorMode);
+    stepperMotor.motor(stepperMotor.motorMode, stepperMotor.a, stepperMotor.b, stepperMotor.c);
 }
