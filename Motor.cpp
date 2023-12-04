@@ -64,27 +64,27 @@ void Motor::motorConst(int t_interval) {
 }
 
 void Motor::motorAcc(int t_minInterval, int t_maxInterval) {
-    static int duration = t_maxInterval;
+    static int interval = t_maxInterval;
     static int cycleAcc = 200;
 
     // reset function state if direction changes
     if (reset) {
-        duration = t_maxInterval;
+        interval = t_maxInterval;
         cycleAcc = 200;
         resetFun(false);
     }
 
     // chrono
-    if (motorAccChrono.hasPassed(duration)) {
+    if (motorAccChrono.hasPassed(interval)) {
         motorAccChrono.restart();
 
-        driveMotor();  
+        driveMotor();
 
         // decreasing duration
         if (cycleAcc <= 0) {
             cycleAcc = 200;
-            if (duration > t_minInterval) {
-                duration--;
+            if (interval > t_minInterval) {
+                interval--;
             }
         }
         cycleAcc--;
