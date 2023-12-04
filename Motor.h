@@ -16,7 +16,7 @@ class Motor {
         void motorChangeDir();
         void motorConst(int t_interval);
         void motorAcc(int t_minInterval, int t_maxInterval);
-        void motorAngle(uint16_t t_angle, int t_rotations, int t_interval);
+        void motorStep(uint16_t t_angle, int t_count, int t_interval);
         void motorSatSweep(int t_seconds);
         void motorCalibrate();
         void resetFun(bool t_state);

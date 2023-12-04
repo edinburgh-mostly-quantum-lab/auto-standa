@@ -4,8 +4,8 @@ import pyvisa
 
 arduino = serial.Serial(port='/dev/ttyACM0', baudrate=115200, timeout=.1)
 
-inst = USBTMC(device="/dev/usbtmc0")
-power_meter = ThorlabsPM100(inst=inst)
+# inst = USBTMC(device="/dev/usbtmc0")
+# power_meter = ThorlabsPM100(inst=inst)
 
 menu = """Select option:
 0. Quit
@@ -30,4 +30,4 @@ while True:
         break
     else:
         value = write_read(option)
-        print(power_meter.read)
+        # print(power_meter.read)

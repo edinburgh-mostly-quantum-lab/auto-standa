@@ -37,7 +37,7 @@ void Motor::motor(int motorMode) {
         break;
 
     case 3: // motor step in degrees
-        motorAngle(180, 1, 100);
+        motorStep(45, 2, 100);
         break;
 
     case 4: // satellite sweep
@@ -96,14 +96,14 @@ uint64_t Motor::degToStep(int t_deg) {
     return steps;
 }
 
-void Motor::motorAngle(uint16_t t_angle, int t_rotations, int t_interval) {
-    static int rotations = t_rotations;
+void Motor::motorStep(uint16_t t_angle, int t_count, int t_interval) {
+    static int count = t_count;
     static uint64_t steps = degToStep(t_angle);
 
     // reset function state if direction changes
     if (reset) {
         steps = degToStep(t_angle);
-        rotations = t_rotations;
+        count = t_count;
         resetFun(false);
     }
 
@@ -111,10 +111,16 @@ void Motor::motorAngle(uint16_t t_angle, int t_rotations, int t_interval) {
     if (motorStepChrono.hasPassed(t_interval)) {
         motorStepChrono.restart();
 
-        // decreasing steps
-        if (steps > 0) {
-            Motor::driveMotor();
-            steps--;
+        if (count > 0) {
+            // decreasing steps
+            if (steps > 0) {
+                driveMotor();
+                steps--;
+            }
+            else {
+                count--;
+                steps = degToStep(t_angle);
+            }
         }
     }
 }
@@ -126,10 +132,6 @@ void Motor::motorSatSweep(int t_seconds) {
         count = 1;
         resetFun(false);
     }
-
-    motorAngle(45, 1, 100);
-    motorChangeDir();
-    motorAngle(45, 1, 100);
 }
 
 void Motor::motorCalibrate() {
