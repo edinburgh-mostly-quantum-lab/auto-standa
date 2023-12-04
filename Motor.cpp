@@ -1,5 +1,4 @@
-#include "Motor.hpp"
-
+#include "Motor.h"
 #include "Chrono.h"
 //https://github.com/SofaPirate/Chrono
 
@@ -18,7 +17,7 @@ Motor::Motor(uint64_t x) {
 
 void Motor::driveMotor() {
     motorState = 1 - motorState; // flip state
-    digitalWrite(STEP_PIN, motorState);
+    digitalWriteFast(STEP_PIN, motorState);
 }
 
 void Motor::motor(int motorMode) {
@@ -26,25 +25,33 @@ void Motor::motor(int motorMode) {
     {
     case 0: // motor off
         motorState = LOW;
-        digitalWrite(STEP_PIN, motorState);
+        digitalWriteFast(STEP_PIN, motorState);
         break;
 
     case 1: // motor constant speed
         motorConst(100);
-    break;
+        break;
 
     case 2: // motor accelerate
         motorAcc(50, 500);
         break;
 
     case 3: // motor step in degrees
-        motorAngle(180, 100);
+        motorStep(45, 2, 100);
         break;
+
+    case 4: // satellite sweep
+        motorSatSweep(200);
     
     default:
         Serial.println("Error: Invalid mode for motor");
         break;
     }
+}
+
+void Motor::motorChangeDir() {
+    motorDirection = 1 - motorDirection;
+    digitalWriteFast(DIR_PIN, motorDirection);
 }
 
 void Motor::motorConst(int t_interval) {
@@ -57,27 +64,27 @@ void Motor::motorConst(int t_interval) {
 }
 
 void Motor::motorAcc(int t_minInterval, int t_maxInterval) {
-    static int duration = t_maxInterval;
+    static int interval = t_maxInterval;
     static int cycleAcc = 200;
 
     // reset function state if direction changes
     if (reset) {
-        duration = t_maxInterval;
+        interval = t_maxInterval;
         cycleAcc = 200;
         resetFun(false);
     }
 
     // chrono
-    if (motorAccChrono.hasPassed(duration)) {
+    if (motorAccChrono.hasPassed(interval)) {
         motorAccChrono.restart();
 
-        driveMotor();  
+        driveMotor();
 
         // decreasing duration
         if (cycleAcc <= 0) {
             cycleAcc = 200;
-            if (duration > t_minInterval) {
-                duration--;
+            if (interval > t_minInterval) {
+                interval--;
             }
         }
         cycleAcc--;
@@ -89,12 +96,14 @@ uint64_t Motor::degToStep(int t_deg) {
     return steps;
 }
 
-void Motor::motorAngle(uint16_t t_angle, int t_interval) {
-    static long double stepCount = degToStep(t_angle);
+void Motor::motorStep(uint16_t t_angle, int t_count, int t_interval) {
+    static int count = t_count;
+    static uint64_t steps = degToStep(t_angle);
 
     // reset function state if direction changes
     if (reset) {
-        stepCount = degToStep(t_angle);
+        steps = degToStep(t_angle);
+        count = t_count;
         resetFun(false);
     }
 
@@ -102,12 +111,31 @@ void Motor::motorAngle(uint16_t t_angle, int t_interval) {
     if (motorStepChrono.hasPassed(t_interval)) {
         motorStepChrono.restart();
 
-        // decreasing steps
-        if (stepCount > 0) {
-            Motor::driveMotor();
-            stepCount--;
+        if (count > 0) {
+            // decreasing steps
+            if (steps > 0) {
+                driveMotor();
+                steps--;
+            }
+            else {
+                count--;
+                steps = degToStep(t_angle);
+            }
         }
     }
+}
+
+void Motor::motorSatSweep(int t_seconds) {
+    static int count = 1;
+
+    if (reset) {
+        count = 1;
+        resetFun(false);
+    }
+}
+
+void Motor::motorCalibrate() {
+
 }
 
 void Motor::resetFun(bool t_state) {
