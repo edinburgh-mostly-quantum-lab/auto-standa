@@ -30,7 +30,7 @@ void Motor::motor(int motorMode) {
 
     case 1: // motor constant speed
         motorConst(100);
-    break;
+        break;
 
     case 2: // motor accelerate
         motorAcc(50, 500);
