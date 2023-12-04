@@ -23,20 +23,11 @@ void setup() {
     pinMode(STEP_PIN, OUTPUT);      // enable pin to control motor steps
 
     digitalWrite(DIR_PIN, stepperMotor.motorDirection);
-
-    Serial.println(
-        "Select option:\n"
-        "1. Turn off motor\n"
-        "2. Toggle motor direction\n"
-        "3. Enable motor: constant velocity\n"
-        "4. Enable motor: accelerate\n"
-        "5. Enable motor: angle"
-    );
 }
 
 void loop() {
     if (Serial.available()) {
-        int option = Serial.parseInt();
+        int option = Serial.readString().toInt(); 
         switch (option)
         {
         case 1: // turn motor off
