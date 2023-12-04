@@ -13,15 +13,14 @@ class Motor {
         Motor(uint64_t x);
         void driveMotor();
         void motor(int motorMode);
-        void motorConst(int duration);
-        void motorAcc(int minDuration, int maxDuration);
-        void motorAngle(uint16_t angle, int duration);
-        void motorRevs(int revolutions);
-        void resetFun(bool state);
+        void motorConst(int t_interval);
+        void motorAcc(int t_minInterval, int t_maxInterval);
+        void motorAngle(uint16_t t_angle, int t_interval);
+        void resetFun(bool t_state);
 
     private:
         bool reset = false;
 
     private:
-        uint64_t degToStep(int deg);
+        uint64_t degToStep(int t_deg);
 };

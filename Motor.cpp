@@ -47,22 +47,22 @@ void Motor::motor(int motorMode) {
     }
 }
 
-void Motor::motorConst(int duration) {
+void Motor::motorConst(int t_interval) {
     // chrono
-    if (motorConstChrono.hasPassed(duration)) {
+    if (motorConstChrono.hasPassed(t_interval)) {
         motorConstChrono.restart();
 
         driveMotor();        
     }
 }
 
-void Motor::motorAcc(int minDuration, int maxDuration) {
-    static int duration = maxDuration;
+void Motor::motorAcc(int t_minInterval, int t_maxInterval) {
+    static int duration = t_maxInterval;
     static int cycleAcc = 200;
 
     // reset function state if direction changes
     if (reset) {
-        duration = maxDuration;
+        duration = t_maxInterval;
         cycleAcc = 200;
         resetFun(false);
     }
@@ -76,7 +76,7 @@ void Motor::motorAcc(int minDuration, int maxDuration) {
         // decreasing duration
         if (cycleAcc <= 0) {
             cycleAcc = 200;
-            if (duration > minDuration) {
+            if (duration > t_minInterval) {
                 duration--;
             }
         }
@@ -84,22 +84,22 @@ void Motor::motorAcc(int minDuration, int maxDuration) {
     }
 }
 
-uint64_t Motor::degToStep(int deg) {
-    uint64_t steps = (fullRev * deg) / 360;
+uint64_t Motor::degToStep(int t_deg) {
+    uint64_t steps = (fullRev * t_deg) / 360;
     return steps;
 }
 
-void Motor::motorAngle(uint16_t angle, int duration) {
-    static long double stepCount = degToStep(angle);
+void Motor::motorAngle(uint16_t t_angle, int t_interval) {
+    static long double stepCount = degToStep(t_angle);
 
     // reset function state if direction changes
     if (reset) {
-        stepCount = degToStep(angle);
+        stepCount = degToStep(t_angle);
         resetFun(false);
     }
 
     // chrono
-    if (motorStepChrono.hasPassed(duration)) {
+    if (motorStepChrono.hasPassed(t_interval)) {
         motorStepChrono.restart();
 
         // decreasing steps
@@ -110,16 +110,11 @@ void Motor::motorAngle(uint16_t angle, int duration) {
     }
 }
 
-void Motor::motorRevs(int revolutions) {
-    
-}
-
-void Motor::resetFun(bool state) {
-    if (state == true) {
+void Motor::resetFun(bool t_state) {
+    if (t_state == true) {
         reset = true;
     }
-    else
-    {
+    else {
         reset = false;
     }
 }

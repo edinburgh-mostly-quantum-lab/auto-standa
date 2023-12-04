@@ -48,7 +48,6 @@ void loop() {
             stepperMotor.motorDirection = 1 - stepperMotor.motorDirection;
             digitalWrite(DIR_PIN, stepperMotor.motorDirection);
             stepperMotor.resetFun(true);
-            
             break;
 
         case 3: // drive motor with constant speed
