@@ -10,14 +10,9 @@ arduino = serial.Serial(port='/dev/ttyACM0', baudrate=115200, timeout=.1)
 
 menu = """Select option:
 0. Quit
-1. Turn off motor
-2. Toggle motor direction
-3. Enable motor: constant velocity
-4. Enable motor: accelerate
-5. Enable motor: angle
-6. Motor profile: Satellite Sweep
-7. Calibrate motor
-"""
+1. Toggle motor direction
+2. Step motor at slowest speed
+3. Motor profile: Satellite Sweep"""
 
 def writeData(data):
     data = '<' + data + '>'

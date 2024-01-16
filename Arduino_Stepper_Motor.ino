@@ -21,8 +21,8 @@ void setup() {
 
 void loop() {
     while (Serial.available()) {
-        readData();
-        if (newData == true) {
+        readData(); // read serial data
+        if (newData == true) { // parse data for mode and angle
             strcpy(tempChars, receivedData);
             parseData();
             newData = false;
@@ -31,15 +31,16 @@ void loop() {
         digitalWrite(EN_PIN, LOW);
         switch (mode)
         {
-        case 1:
+        case 1: // change motor direction
             motor.motorChangeDir();
+            Serial.println("Toggled motor direction");
             break;
 
-        case 2:
+        case 2: // step motor at slowest speed
             motor.motorMicroStep(angle);
             break;
 
-        case 3:
+        case 3: // satellite profile
             motor.motorMicroStep(angle);
             motor.motorChangeDir();
             motor.motorMicroStep(angle);
@@ -52,7 +53,7 @@ void loop() {
         motor.resetPins();
         mode = 0;
         angle = 0;
-        Serial.println(mode);
+        clearSerialBuffer();
     }
 }
 
@@ -87,7 +88,7 @@ void readData() {
     }
 }
 
-void parseData() { // accepts data as <int, int>
+void parseData() { // accepts data as <int mode, int angle>
     char * strtokIdx;
 
     strtokIdx = strtok(tempChars, ",");
@@ -102,5 +103,11 @@ void printData() {
         Serial.print("Received data: ");
         Serial.println(receivedData);
         newData = false;
+    }
+}
+
+void clearSerialBuffer() {
+    while (Serial.available() > 0) {
+        Serial.read();
     }
 }

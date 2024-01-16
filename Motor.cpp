@@ -4,7 +4,7 @@ Motor::Motor(uint64_t t_fullRevStep) {
     fullRevStep = t_fullRevStep;
 }
 
-void Motor::driveMotor() {
+void Motor::driveMotor() { // drives motor in alternating HIGH LOW to step motor
     motorState = 1 - motorState; // flip state
     digitalWrite(STEP_PIN, motorState);
     delay(1);
@@ -19,7 +19,7 @@ void Motor::motorChangeDir() {
 }
 
 void Motor::motorMicroStep(int t_deg) {
-    digitalWrite(MS1_PIN, HIGH); //Pull MS1,MS2, and MS3 high to set logic to 1/16th microstep resolution
+    digitalWrite(MS1_PIN, HIGH); //Pull MS1, MS2, MS3 high to set logic to 1/16th microstep resolution
     digitalWrite(MS2_PIN, HIGH);
     digitalWrite(MS3_PIN, HIGH);
 
