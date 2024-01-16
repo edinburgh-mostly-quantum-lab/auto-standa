@@ -1,6 +1,12 @@
 #include "Arduino.h"
-#include "digitalWriteFast.h"
-// https://www.arduino.cc/reference/en/libraries/digitalwritefast/
+
+// map pins to pin numbers on board
+#define DIR_PIN 2
+#define STEP_PIN 3
+#define MS3_PIN 8
+#define MS2_PIN 9
+#define MS1_PIN 10
+#define EN_PIN 12
 
 class Motor {
     public:
@@ -9,23 +15,15 @@ class Motor {
         bool motorState = 0;
         uint64_t fullRevStep;
 
-        int a;
-        int b;
-        int c;
-        
     public:
         Motor(uint64_t t_fullRevStep);
-        void driveMotor();
-        void motor(int motorMode, int a = 0, int b = 0, int c = 0);
         void motorChangeDir();
-        void motorConst(int t_interval);
-        void motorAcc(int t_minInterval, int t_maxInterval);
-        void motorStep(uint16_t t_angle, int t_count, int t_interval);
-        void resetFun(bool t_state);
+        void motorMicroStep(int t_deg);
+
+        void initPins();
+        void resetPins();
 
     private:
-        bool reset = false;
-
-    private:
+        void driveMotor();
         uint64_t degToStep(int t_deg);
 };

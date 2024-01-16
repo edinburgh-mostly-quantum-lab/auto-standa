@@ -1,6 +1,7 @@
 import serial, time
 from ThorlabsPM100 import ThorlabsPM100, USBTMC
-import pyvisa
+import numpy as numpy
+import matplotlib.pyplot as plt
 
 arduino = serial.Serial(port='/dev/ttyACM0', baudrate=115200, timeout=.1)
 
@@ -18,16 +19,11 @@ menu = """Select option:
 7. Calibrate motor
 """
 
-def write_read(x): 
-    arduino.write(bytes(x, 'utf-8')) 
-    time.sleep(0.05)
-    data = arduino.readline() 
-    return data 
+def writeData(data):
+    data = '<' + data + '>'
+    arduino.write(data.encode('utf-8'))
 
-while True:
-    option = input(menu)
-    if option == 0:
-        break
-    else:
-        value = write_read(option)
-        # print(power_meter.read)
+# while True:
+print(menu)
+inp = input("<Mode>, <Angle>: ")
+writeData(inp)
