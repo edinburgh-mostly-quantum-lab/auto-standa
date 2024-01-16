@@ -52,6 +52,7 @@ void loop() {
         motor.resetPins();
         mode = 0;
         angle = 0;
+        Serial.println("1");
         clearSerialBuffer();
     }
 }
