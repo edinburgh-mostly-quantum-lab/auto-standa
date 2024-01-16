@@ -33,7 +33,6 @@ void loop() {
         {
         case 1: // change motor direction
             motor.motorChangeDir();
-            Serial.println("Toggled motor direction");
             break;
 
         case 2: // step motor at slowest speed
