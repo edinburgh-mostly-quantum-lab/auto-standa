@@ -44,7 +44,8 @@ menu = """Select option:
 4. Step motor: Quarter step
 5. Step motor: Eighth step
 6. Step motor: Sixteenth step
-7. Motor profile: Satellite Sweep"""
+7. Motor profile: Satellite Sweep
+9. Quit"""
 
 def writeData(data):
     data = '<' + data + '>'
@@ -54,20 +55,24 @@ def writeData(data):
         print("Simulating arduino: Sending " + data)
 
 def printStatus():
-    global currentAngle, currentDirection, arduinoMessage, powerMeterMessage
+    global currentAngle, currentDirection, arduinoMessage, powerMeter, powerMeterStatus, powerMeterMessage
     print(arduinoMessage)
     print(powerMeterMessage)
+
+    if powerMeterStatus == 1:
+        print("Current power: " + str(powerMeter.read) + " W")
+
     if currentDirection == 0:
-        dirMessage = "Motor direction: Clockwise"
+        dirMessage = "Motor direction: Forwards"
     else:
-        dirMessage = "Motor direction: Counter-clockwise"
+        dirMessage = "Motor direction: Backwards"
     print(dirMessage)
-    print("Current motor angle: " + str(currentAngle))
+    print("Current motor angle: " + str(currentAngle) + "°")
 
 def calcAngle(deltaAngle):
     deltaAngle = int(deltaAngle)
     global currentAngle, currentDirection
-    if currentDirection == 0:
+    if currentDirection == 1:
         deltaAngle = -1 * deltaAngle
         
     currentAngle = currentAngle + int(deltaAngle)
@@ -75,6 +80,8 @@ def calcAngle(deltaAngle):
         currentAngle = currentAngle - 360
     elif currentAngle < 0:
         currentAngle = currentAngle + 360
+    if currentAngle == 360:
+        currentAngle = 0
 
 def toggleDir():
     global currentDirection
@@ -89,10 +96,16 @@ def stepMotor(mode, angle):
 def parseInput(input): # seperate input into mode, fullAngle, stepAngle
     inputList = input.strip().split(",")
     mode = inputList[0]
-    fullAngle = inputList[1]
-    # stepAngle = inputList[2]
+    try:
+        fullAngle = inputList[1]
+    except:
+        fullAngle = 0
+    try:
+        stepAngle = inputList[2]
+    except:
+        stepAngle = 0
 
-    return mode, fullAngle
+    return mode, fullAngle, stepAngle
 
 def powerDataAcq():
     with open('data.txt', 'w') as f:
@@ -101,12 +114,12 @@ def powerDataAcq():
 def main():
     global currentAngle
     while True:
-        # os.system('clear')
+        os.system('clear')
         printStatus()
         print(menu)
 
         userInput = input("<Mode>,<Full Angle>,<Angle Step>: ")
-        mode, fullAngle = parseInput(userInput)
+        mode, fullAngle, stepAngle = parseInput(userInput)
         match int(mode):
             case 0: # reset angle
                 currentAngle = 0
