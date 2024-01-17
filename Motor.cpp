@@ -18,7 +18,10 @@ void Motor::motorChangeDir() {
     digitalWrite(DIR_PIN, motorDirection);
 }
 
-void Motor::motorFullStep(int t_deg) { // Uses default logic for full step resolution
+void Motor::motorFullStep(int t_deg) {
+    digitalWrite(MS1_PIN, LOW); // Logic for full step resolution
+    digitalWrite(MS2_PIN, LOW);
+    digitalWrite(MS3_PIN, LOW);
     uint64_t steps = degToStep(t_deg);
 
     for (int s=0; s<steps; s++) {
@@ -86,6 +89,7 @@ void Motor::initPins() {
     pinMode(MS2_PIN, OUTPUT);
     pinMode(MS3_PIN, OUTPUT);
     pinMode(EN_PIN, OUTPUT);
+    resetPins();
 }
 
 void Motor::resetPins() {
