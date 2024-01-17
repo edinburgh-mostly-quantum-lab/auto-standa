@@ -5,28 +5,33 @@ import matplotlib.pyplot as plt
 
 # Check if arduino is detected
 try:
-    arduino = serial.Serial(port='/dev/ttyACM0', baudrate=115200, timeout=0.1)
+    arduinoPort = '/dev/ttyACM0'
+    arduino = serial.Serial(port=arduinoPort, baudrate=115200, timeout=0.1)
+except:
     try:
-        arduino = serial.Serial(port='/dev/ttyACM1', baudrate=115200, timeout=0.1)
+        arduinoPort = '/dev/ttyACM1'
+        arduino = serial.Serial(port=arduinoPort, baudrate=115200, timeout=0.1)
     except:
         arduinoStatus = 0
         arduinoMessage = "Arduino not found"
     else:
         arduinoStatus = 1
-        arduinoMessage = "Arduino found"
-except:
-    pass
+        arduinoMessage = "Arduino found at " + arduinoPort
+else:
+    arduinoStatus = 1
+    arduinoMessage = "Arduino found at " + arduinoPort 
 
 # Check if power meter is detected
-try: 
-    inst = USBTMC(device="/dev/usbtmc0")
+try:
+    powerMeterPort = "/dev/usbtmc0"
+    inst = USBTMC(device=powerMeterPort)
 except:
     powerMeterStatus = 0
     powerMeterMessage = "Power meter not found"
 else:
     powerMeter = ThorlabsPM100(inst=inst)
     powerMeterStatus = 1
-    powerMeterMessage = "Power meter found"
+    powerMeterMessage = "Power meter found at " + powerMeterPort
 
 currentAngle = 0
 currentDirection = 0
@@ -47,7 +52,6 @@ def writeData(data):
         arduino.write(data.encode('utf-8'))
     except:
         print("Simulating arduino: Sending " + data)
-        pass
 
 def printStatus():
     global currentAngle, currentDirection, arduinoMessage, powerMeterMessage
