@@ -1,75 +1,119 @@
-#include "Motor.h"
+// Pin layout: Driver board -> Wire colour -> Arduino
+// DIR  -> Red    -> 2
+// STEP -> Red    -> 3
+// GND  -> Black  -> GND (DIGITAL)
+// MS3  -> Green  -> 8
+// MS2  -> Orange -> 9
+// MS1  -> White  -> 10
+// EN   -> Yellow -> 12
 
-// map pins to pin numbers on board
-#define DIR_PIN 2
-#define STEP_PIN 3
+#include "Motor.hpp"
 
-// for standard C++-like printing
-template <typename T>
-Print& operator<<(Print& printer, T value)
-{
-    printer.print(value);
-    return printer;
-}
+// for serial communication
+const byte numChars = 32;
+char receivedData[numChars];
+char tempChars[numChars];
+bool newData = false;
 
-Motor stepperMotor(13520);
+int mode = 0;
+int angle = 0;
+
+Motor motor(400);
 
 void setup() {
     Serial.begin(115200); // init serial for communication with board
     delay(1);
-
-    pinMode(LED_BUILTIN, OUTPUT);   // init serial for communication with board
-    pinMode(DIR_PIN, OUTPUT);       // enable pin to control motor direction
-    pinMode(STEP_PIN, OUTPUT);      // enable pin to control motor steps
-
-    digitalWrite(DIR_PIN, stepperMotor.motorDirection);
+    motor.initPins();
+    digitalWrite(DIR_PIN, motor.motorDirection);
 }
 
 void loop() {
-    if (Serial.available()) {
-        int option = Serial.readString().toInt(); 
-        switch (option)
-        {
-        case 1: // turn motor off
-            stepperMotor.motorMode = 0;
-            stepperMotor.resetFun(true);
-            break;
-
-        case 2: // reverse motor direction
-            stepperMotor.motorChangeDir();
-            stepperMotor.resetFun(true);
-            break;
-
-        case 3: // drive motor with constant speed
-            stepperMotor.motorMode = 1;
-            stepperMotor.a = 100;
-            stepperMotor.resetFun(true);
-            break;
-
-        case 4: // accelerate motor
-            stepperMotor.motorMode = 2;
-            stepperMotor.a = 50;
-            stepperMotor.b = 500;
-            stepperMotor.resetFun(true);
-            break;
-
-        case 5: // step motor
-            stepperMotor.motorMode = 3;
-            stepperMotor.a = 45;
-            stepperMotor.b = 2;
-            stepperMotor.c = 100;
-            stepperMotor.resetFun(true);
-            break;
-
-        case 6: // sat sweep profile
-            stepperMotor.motorMode = 4;
-            stepperMotor.resetFun(true);
-            break;
-        
-        default:
-            Serial.println("Error: Invalid input");
-            break;
+    while (Serial.available()) {
+        readData();             // read serial data
+        if (newData == true) {  // parse data for mode and angle
+            strcpy(tempChars, receivedData);
+            parseData();
+            newData = false;
         }
+        digitalWrite(EN_PIN, LOW);
+        switch (mode) {
+            case 1: // change motor direction
+                motor.motorChangeDir();
+                break;
+
+            case 2:
+                motor.motorFullStep(angle);
+                break;
+
+            case 3:
+                motor.motorHalfStep(angle);
+                break;
+
+            case 4:
+                motor.motorQuarterStep(angle);
+                break;
+
+            case 5:
+                motor.motorEighthStep(angle);
+                break;
+
+            case 6:
+                motor.motorSixteenthStep(angle);
+                break;
+
+            default:
+                break;
+        }
+        motor.resetPins();
+        mode = 0;
+        angle = 0;
+        clearSerialBuffer();
     }
-    stepperMotor.motor(stepperMotor.motorMode, stepperMotor.a, stepperMotor.b, stepperMotor.c);
+}
+
+void readData() { // incomming serial data must encapsulated in < >
+    static bool recvInProgress = false;
+    static byte idx = 0;
+    char startMarker = '<';
+    char endMarker = '>';
+    char dataChar;
+
+    while (Serial.available() > 0 && newData == false) {
+        dataChar = Serial.read();
+
+        if (recvInProgress == true) {
+            if (dataChar != endMarker) {
+                receivedData[idx] = dataChar;
+                idx++;
+                if (idx >= numChars) {
+                    idx = numChars - 1;
+                }
+            }
+            else {
+                receivedData[idx] = '\0'; // terminates the string
+                recvInProgress = false;
+                idx = 0;
+                newData = true;
+            }
+        }
+        else if (dataChar == startMarker) {
+            recvInProgress = true;
+        } 
+    }
+}
+
+void parseData() { // accepts data as <int mode, int angle>
+    char * strtokIdx;
+
+    strtokIdx = strtok(tempChars, ",");
+    mode = atoi(strtokIdx);     // motor mode
+
+    strtokIdx = strtok(NULL, ",");
+    angle = atoi(strtokIdx);    // angle for motor step
+}
+
+void clearSerialBuffer() {
+    while (Serial.available() > 0) {
+        Serial.read();
+    }
 }

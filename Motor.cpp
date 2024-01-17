@@ -1,91 +1,79 @@
-#include "Motor.h"
-#include "Chrono.h"
-//https://github.com/SofaPirate/Chrono
-
-// map pins to pin numbers on board
-#define DIR_PIN 2
-#define STEP_PIN 3
-
-// init Chrono objects for time keeping
-Chrono motorConstChrono(Chrono::MICROS);
-Chrono motorAccChrono(Chrono::MICROS);
-Chrono motorStepChrono(Chrono::MICROS);
-Chrono motorSatSweepChrono(Chrono::MICROS);
+#include "Motor.hpp"
 
 Motor::Motor(uint64_t t_fullRevStep) {
     fullRevStep = t_fullRevStep;
 }
 
-void Motor::driveMotor() {
-    motorState = 1 - motorState; // flip state
-    digitalWriteFast(STEP_PIN, motorState);
-}
-
-void Motor::motor(int motorMode, int a, int b, int c) {
-    switch (motorMode)
-    {
-    case 0: // motor off
-        motorState = LOW;
-        digitalWriteFast(STEP_PIN, motorState);
-        break;
-
-    case 1: // motor constant speed
-        motorConst(a);
-        break;
-
-    case 2: // motor accelerate
-        motorAcc(a, b);
-        break;
-
-    case 3: // motor step in degrees
-        motorStep(a, b, c);
-        break;
-    
-    default:
-        Serial.println("Error: Invalid mode for motor");
-        break;
-    }
+void Motor::driveMotor() {          // drives motor in alternating HIGH LOW to step motor
+    motorState = 1 - motorState;    // flip state
+    digitalWrite(STEP_PIN, motorState);
+    delay(1);
+    motorState = 1 - motorState;    // flip state
+    digitalWrite(STEP_PIN, motorState);
+    delay(1);
 }
 
 void Motor::motorChangeDir() {
     motorDirection = 1 - motorDirection;
-    digitalWriteFast(DIR_PIN, motorDirection);
+    digitalWrite(DIR_PIN, motorDirection);
 }
 
-void Motor::motorConst(int t_interval) {
-    // chrono
-    if (motorConstChrono.hasPassed(t_interval)) {
-        motorConstChrono.restart();
+void Motor::motorFullStep(int t_deg) {
+    digitalWrite(MS1_PIN, LOW); // Logic for full step resolution
+    digitalWrite(MS2_PIN, LOW);
+    digitalWrite(MS3_PIN, LOW);
+    uint64_t steps = degToStep(t_deg);
 
-        driveMotor();        
-    }
-}
-
-void Motor::motorAcc(int t_minInterval, int t_maxInterval) {
-    static int interval = t_maxInterval;
-    static int cycleAcc = 200;
-
-    // reset function state if direction changes
-    if (reset) {
-        interval = t_maxInterval;
-        cycleAcc = 200;
-        resetFun(false);
-    }
-
-    // chrono
-    if (motorAccChrono.hasPassed(interval)) {
-        motorAccChrono.restart();
-
+    for (int s=0; s<steps; s++) {
         driveMotor();
+    }
+}
 
-        // decreasing duration
-        if (cycleAcc <= 0) {
-            cycleAcc = 200;
-            if (interval > t_minInterval) {
-                interval--;
-            }
-        }
-        cycleAcc--;
+void Motor::motorHalfStep(int t_deg) {
+    digitalWrite(MS1_PIN, HIGH); // Logic for half step resolution
+    digitalWrite(MS2_PIN, LOW);
+    digitalWrite(MS3_PIN, LOW);
+
+    uint64_t steps = 2*degToStep(t_deg);
+
+    for (int s=0; s<steps; s++) {
+        driveMotor();
+    }
+}
+
+void Motor::motorQuarterStep(int t_deg) {
+    digitalWrite(MS1_PIN, LOW); // Logic for quarter step resolution
+    digitalWrite(MS2_PIN, HIGH);
+    digitalWrite(MS3_PIN, LOW);
+
+    uint64_t steps = 4*degToStep(t_deg);
+
+    for (int s=0; s<steps; s++) {
+        driveMotor();
+    }
+}
+
+void Motor::motorEighthStep(int t_deg) {
+    digitalWrite(MS1_PIN, HIGH); // Logic for eighth step resolution
+    digitalWrite(MS2_PIN, HIGH);
+    digitalWrite(MS3_PIN, LOW);
+
+    uint64_t steps = 8*degToStep(t_deg);
+
+    for (int s=0; s<steps; s++) {
+        driveMotor();
+    }
+}
+
+void Motor::motorSixteenthStep(int t_deg) {
+    digitalWrite(MS1_PIN, HIGH); // Logic for sixteenth step resolution
+    digitalWrite(MS2_PIN, HIGH);
+    digitalWrite(MS3_PIN, HIGH);
+
+    uint64_t steps = 16*degToStep(t_deg);
+
+    for (int s=0; s<steps; s++) {
+        driveMotor();
     }
 }
 
@@ -94,40 +82,20 @@ uint64_t Motor::degToStep(int t_deg) {
     return steps;
 }
 
-void Motor::motorStep(uint16_t t_angle, int t_count, int t_interval) {
-    static int count = t_count;
-    static uint64_t steps = degToStep(t_angle);
-
-    // reset function state if direction changes
-    if (reset) {
-        steps = degToStep(t_angle);
-        count = t_count;
-        resetFun(false);
-    }
-
-    // chrono
-    if (motorStepChrono.hasPassed(t_interval)) {
-        motorStepChrono.restart();
-
-        if (count > 0) {
-            // decreasing steps
-            if (steps > 0) {
-                driveMotor();
-                steps--;
-            }
-            else {
-                count--;
-                steps = degToStep(t_angle);
-            }
-        }
-    }
+void Motor::initPins() {
+    pinMode(DIR_PIN, OUTPUT);   // enable pin to control motor direction
+    pinMode(STEP_PIN, OUTPUT);  // enable pin to control motor steps
+    pinMode(MS1_PIN, OUTPUT);   // enable logic pins for step resolution
+    pinMode(MS2_PIN, OUTPUT);
+    pinMode(MS3_PIN, OUTPUT);
+    pinMode(EN_PIN, OUTPUT);
+    resetPins();
 }
 
-void Motor::resetFun(bool t_state) {
-    if (t_state == true) {
-        reset = true;
-    }
-    else {
-        reset = false;
-    }
+void Motor::resetPins() {
+    digitalWrite(STEP_PIN, LOW);
+    digitalWrite(MS1_PIN, LOW);
+    digitalWrite(MS2_PIN, LOW);
+    digitalWrite(MS3_PIN, LOW);
+    digitalWrite(EN_PIN, HIGH);
 }
