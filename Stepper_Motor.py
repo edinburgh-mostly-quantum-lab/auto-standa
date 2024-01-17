@@ -133,12 +133,19 @@ def powerDataAcq():
         writer.writerow(data)
 
 def calibrate():
-    global currentAngle
+    global currentAngle, powerMeter
     lossAngle = {}
-    refPower = 20
+    try:
+        refPower = powerMeter.read
+    except:
+        refPower = 20
 
     for x in range(0, int(350/50)):
-        power = refPower - x
+        try:
+            power = powerMeter.read
+        except:
+            power = refPower - x
+            
         loss = -10*np.log10(np.divide(power, refPower))
         lossAngle.update({loss:currentAngle})
         stepMotor(6, 5)
