@@ -7,7 +7,7 @@
 // MS1  -> White  -> 10
 // EN   -> Yellow -> 12
 
-#include "Motor.h"
+#include "Motor.hpp"
 
 // for serial communication
 const byte numChars = 32;

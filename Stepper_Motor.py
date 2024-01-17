@@ -1,7 +1,9 @@
-import serial, os, time
+import serial, os, time, csv, datetime
 from ThorlabsPM100 import ThorlabsPM100, USBTMC
 import numpy as numpy
 import matplotlib.pyplot as plt
+
+fileName = str(datetime.datetime.now()) + ".csv"
 
 # Check if arduino is detected
 try:
@@ -19,7 +21,7 @@ except:
         arduinoMessage = "Arduino found at " + arduinoPort
 else:
     arduinoStatus = 1
-    arduinoMessage = "Arduino found at " + arduinoPort 
+    arduinoMessage = "Arduino found at " + arduinoPort
 
 # Check if power meter is detected
 try:
@@ -33,6 +35,7 @@ else:
     powerMeterStatus = 1
     powerMeterMessage = "Power meter found at " + powerMeterPort
 
+# Init motor properties
 currentAngle = 0
 currentDirection = 0
 
@@ -48,7 +51,7 @@ menu = """Select option:
 9. Quit"""
 
 def writeData(data):
-    data = '<' + data + '>'
+    data = '<' + str(data) + '>'
     try:
         arduino.write(data.encode('utf-8'))
     except:
@@ -59,14 +62,17 @@ def printStatus():
     print(arduinoMessage)
     print(powerMeterMessage)
 
-    if powerMeterStatus == 1:
+    try:
         print("Current power: " + str(powerMeter.read) + " W")
+    except:
+        print("Current power: 0 W")
 
     if currentDirection == 0:
         dirMessage = "Motor direction: Forwards"
     else:
         dirMessage = "Motor direction: Backwards"
     print(dirMessage)
+    
     print("Current motor angle: " + str(currentAngle) + "°")
 
 def calcAngle(deltaAngle):
@@ -89,7 +95,7 @@ def toggleDir():
     currentDirection = 1 - currentDirection
 
 def stepMotor(mode, angle):
-    writeData(str(mode + "," + angle))
+    writeData(mode + "," + angle)
     calcAngle(angle)
     time.sleep(0.5)
 
@@ -108,8 +114,18 @@ def parseInput(input): # seperate input into mode, fullAngle, stepAngle
     return mode, fullAngle, stepAngle
 
 def powerDataAcq():
-    with open('data.txt', 'w') as f:
-        f.write(str(powerMeter.read()) + " ")
+    global powerMeter, currentAngle
+    with open(fileName, 'a') as f:
+        try:
+            powerMeterReading = powerMeter.read
+        except:
+            powerMeterReading = 0
+
+        timeStamp = datetime.datetime.now().timestamp()
+
+        data=[powerMeterReading, currentAngle, timeStamp]
+        writer = csv.writer(f)
+        writer.writerow(data)
 
 def main():
     global currentAngle
@@ -129,6 +145,7 @@ def main():
 
             case num if 1 < num < 7:
                 stepMotor(mode, fullAngle)
+                powerDataAcq()
 
             # case 7: # satellite profile, step 5 deg, wait, record power, step,
             #     stepMotor()

@@ -1,4 +1,4 @@
-#include "Motor.h"
+#include "Motor.hpp"
 
 Motor::Motor(uint64_t t_fullRevStep) {
     fullRevStep = t_fullRevStep;
