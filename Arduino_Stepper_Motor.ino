@@ -29,50 +29,41 @@ void setup() {
 
 void loop() {
     while (Serial.available()) {
-        readData();                            // read serial data
-        if (newData == true) {                  // parse data for mode and angle
+        readData();             // read serial data
+        if (newData == true) {  // parse data for mode and angle
             strcpy(tempChars, receivedData);
             parseData();
             newData = false;
         }
         digitalWrite(EN_PIN, LOW);
-        Serial.println(mode);
         switch (mode) {
             case 1: // change motor direction
-                Serial.println("Changing motor direction");
                 motor.motorChangeDir();
                 break;
 
             case 2:
-                Serial.println("Stepping motor: Full");
                 motor.motorFullStep(angle);
                 break;
 
             case 3:
-                Serial.println("Stepping motor: Half");
                 motor.motorHalfStep(angle);
                 break;
 
             case 4:
-                Serial.println("Stepping motor: Quarter");
                 motor.motorQuarterStep(angle);
                 break;
 
             case 5:
-                Serial.println("Stepping motor: Eighth");
                 motor.motorEighthStep(angle);
                 break;
 
             case 6:
-                Serial.println("Stepping motor: Sixteenth");
                 motor.motorSixteenthStep(angle);
                 break;
 
             default:
-                Serial.println("Error: Invalid motor mode");
                 break;
         }
-        Serial.println("Motor operation complete");
         motor.resetPins();
         mode = 0;
         angle = 0;
@@ -119,14 +110,6 @@ void parseData() { // accepts data as <int mode, int angle>
 
     strtokIdx = strtok(NULL, ",");
     angle = atoi(strtokIdx);    // angle for motor step
-}
-
-void printData() {
-    if (newData == true) {
-        Serial.print("Received data: ");
-        Serial.println(receivedData);
-        newData = false;
-    }
 }
 
 void clearSerialBuffer() {
