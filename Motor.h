@@ -18,7 +18,11 @@ class Motor {
     public:
         Motor(uint64_t t_fullRevStep);
         void motorChangeDir();
-        void motorMicroStep(int t_deg);
+        void motorFullStep(int t_deg);
+        void motorHalfStep(int t_deg);
+        void motorQuarterStep(int t_deg);
+        void motorEighthStep(int t_deg);
+        void motorSixteenthStep(int t_deg);
 
         void initPins();
         void resetPins();
