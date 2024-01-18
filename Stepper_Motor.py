@@ -1,6 +1,6 @@
 # Dependencies: pip install pyserial ThorlabsPM100 matplotlib
 
-import serial, os, time, csv, datetime, json
+import serial, os, time, csv, datetime, json, asyncio
 from ThorlabsPM100 import ThorlabsPM100, USBTMC
 import numpy as np
 import matplotlib.pyplot as plt
@@ -45,7 +45,7 @@ else:
 
 # Check if power meter is detected
 try:
-    powerMeterPort = '/dev/usbtmc0'
+    powerMeterPort = ''
     inst = USBTMC(device=powerMeterPort)
 except:
     powerMeterStatus = 0
@@ -62,6 +62,8 @@ def sendSerial(data):
     except:
         # print("Simulating arduino: Sending " + data)
         pass
+    else:
+        print("Sending: " + data)
 
 def toggleDir():
     global currentDirection
@@ -198,7 +200,30 @@ def clear():
     elif os.name == 'nt': # Windows
         _ = os.system('cls')
 
-def main():
+async def powerMeterRead(duration):
+    global powerMeter
+    data = []
+    for x in range(0,duration):
+        if powerMeterStatus == 1:
+            powerMeterReading = powerMeter.read
+        else:
+            powerMeterReading = x
+        timeStamp = datetime.datetime.now().timestamp()
+        await asyncio.sleep(1)
+        data.append({powerMeterReading: timeStamp})
+    return data
+
+def writeToCSV(data):
+    fileName = str(datetime.datetime.now())
+    with open(fileName  + '.csv', 'a') as f:
+        writer = csv.writer(f)
+        writer.writerow(data)
+
+async def calibrateMotor():
+    global currentAngle
+    stepMotor(6,360)
+
+async def main():
     global currentAngle, fileName
     while True:
         fileName = str(datetime.datetime.now())
@@ -219,13 +244,17 @@ def main():
 
             case num if 1 < num < 7: # step motor at varying speeds
                 stepMotor(mode, fullAngle)
-                powerDataAcq()
+                # powerDataAcq()
 
             case 7: # satellite profile, step 5 deg, wait, record power, step,
                 satellitePass()
                 
             case 8:
-                calibrate()
+                async for powerData in powerMeterRead(12):
+                    await calibrateMotor()
+
+                with open('calibration.json', 'w') as f: 
+                    f.write(json.dumps(powerData, indent=2))
 
             case 9: # quit
                 break
@@ -234,4 +263,4 @@ def main():
                 print('Invalid input')
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
