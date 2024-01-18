@@ -4,9 +4,26 @@ import serial, os, time, csv, datetime, json
 from ThorlabsPM100 import ThorlabsPM100, USBTMC
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 
 statusMessage = ''
 fileName = ''
+
+# Init motor properties
+currentAngle = 0
+currentDirection = 0
+
+menu = '''Select option:
+0. Reset current angle to zero
+1. Toggle motor direction
+2. Step motor: Full step
+3. Step motor: Half step
+4. Step motor: Quarter step
+5. Step motor: Eighth step
+6. Step motor: Sixteenth step
+7. Motor profile: Satellite Sweep
+8. Calibrate
+9. Quit'''
 
 # Check if arduino is detected
 try:
@@ -38,29 +55,37 @@ else:
     powerMeterStatus = 1
     powerMeterMessage = 'Power meter found at ' + powerMeterPort
 
-# Init motor properties
-currentAngle = 0
-currentDirection = 0
-
-menu = '''Select option:
-0. Reset current angle to zero
-1. Toggle motor direction
-2. Step motor: Full step
-3. Step motor: Half step
-4. Step motor: Quarter step
-5. Step motor: Eighth step
-6. Step motor: Sixteenth step
-7. Motor profile: Satellite Sweep
-8. Calibrate
-9. Quit'''
-
-def writeData(data):
+def sendSerial(data):
     data = '<' + str(data) + '>'
     try:
         arduino.write(data.encode('utf-8'))
     except:
         # print("Simulating arduino: Sending " + data)
         pass
+
+def toggleDir():
+    global currentDirection
+    sendSerial('1')
+    currentDirection = 1 - currentDirection
+
+def stepMotor(mode, angle):
+    sendSerial(str(mode) + ',' + str(angle))
+    calcAngle(angle)
+    time.sleep(0.5)
+
+def calcAngle(deltaAngle):
+    deltaAngle = int(deltaAngle)
+    global currentAngle, currentDirection
+    if currentDirection == 1:
+        deltaAngle = -1 * deltaAngle
+        
+    currentAngle = currentAngle + int(deltaAngle)
+    if currentAngle >= 360:
+        currentAngle = currentAngle - 360
+    elif currentAngle < 0:
+        currentAngle = currentAngle + 360
+    if currentAngle == 360:
+        currentAngle = 0
 
 def printStatus():
     global currentAngle, currentDirection, arduinoMessage, powerMeter, powerMeterStatus, powerMeterMessage
@@ -79,30 +104,6 @@ def printStatus():
     print(dirMessage)
     
     print('Current motor angle: ' + str(currentAngle) + '°')
-
-def calcAngle(deltaAngle):
-    deltaAngle = int(deltaAngle)
-    global currentAngle, currentDirection
-    if currentDirection == 1:
-        deltaAngle = -1 * deltaAngle
-        
-    currentAngle = currentAngle + int(deltaAngle)
-    if currentAngle >= 360:
-        currentAngle = currentAngle - 360
-    elif currentAngle < 0:
-        currentAngle = currentAngle + 360
-    if currentAngle == 360:
-        currentAngle = 0
-
-def toggleDir():
-    global currentDirection
-    writeData('1')
-    currentDirection = 1 - currentDirection
-
-def stepMotor(mode, angle):
-    writeData(str(mode) + ',' + str(angle))
-    calcAngle(angle)
-    time.sleep(0.5)
 
 def parseInput(input): # seperate input into mode, fullAngle, stepAngle
     inputList = input.strip().split(',')
@@ -140,7 +141,7 @@ def calibrate():
     except:
         refPower = 20
 
-    for x in range(0, int(350/50)):
+    for x in range(0, int(360/5)):
         try:
             power = powerMeter.read
         except:
@@ -155,18 +156,18 @@ def calibrate():
 
     plotData(lossAngle.values(), lossAngle.keys(), 'Angle (°)', 'Loss (dB)')
 
-def plotData(x, y, xlabel, ylabel):
-    plt.plot(x, y)
+    # time.sleep(0.5)
+    # toggleDir()
+    # time.sleep(0.5)
+    # stepMotor(2, 350)
+    # time.sleep(0.5)
+    # toggleDir()
+
+def plotData(xVals, yVals, xlabel, ylabel):
+    plt.plot(xVals, yVals)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.savefig(fileName + '.png')
-
-def clear():
-    if os.name == 'posix':  # macOS and Linux
-        _ = os.system('clear')
-    
-    elif os.name == 'nt': # Windows
-        _ = os.system('cls')
 
 def satellitePass():
     data = []
@@ -182,18 +183,33 @@ def satellitePass():
         writer = csv.writer(f)
         writer.writerows(data)
 
-    plotData(data[1], data[0], 'Angle (°)', 'Loss (dB)')
+    lossList = [losses[0] for losses in data]
+    angleList = [angles[1] for angles in data]
+    timeList = [times[2] for times in data]
+    print(angleList)
+    print(lossList)
+    print(timeList)
+    plotData(angleList, lossList, 'Angle (°)', 'Loss (dB)')
+
+def clear():
+    if os.name == 'posix':  # macOS and Linux
+        _ = os.system('clear')
+    
+    elif os.name == 'nt': # Windows
+        _ = os.system('cls')
 
 def main():
     global currentAngle, fileName
     while True:
         fileName = str(datetime.datetime.now())
+
         # clear()
         printStatus()
         print(menu)
 
         userInput = input('<Mode>,<Full Angle>,<Angle Step>: ')
         mode, fullAngle, stepAngle = parseInput(userInput)
+
         match int(mode):
             case 0: # reset angle
                 currentAngle = 0
