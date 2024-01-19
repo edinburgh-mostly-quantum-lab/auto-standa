@@ -30,14 +30,14 @@ class PowerMeter:
         powerList = []
         timeStampList = []
         lossList = []
-        if self.powermeter == 0:
+        if self.powermeter:
             refPower = self.powermeter.read
             async for power, timeStamp in self.loopMeaure(duration=duration):
                 powerList.append(power)
                 loss = -10*np.log10(np.divide(power, refPower))
                 lossList.append(loss)
                 timeStampList.append(timeStamp)  
-        else:
+        else: # simulated power meter
             refPower = 20
             async for x, (power, timeStamp) in range(duration):
                 power = refPower - 0.01*x

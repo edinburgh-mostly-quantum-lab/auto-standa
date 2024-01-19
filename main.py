@@ -1,6 +1,6 @@
 import motor
 import powermeter
-# import profiles
+import profiles
 
 import os
 import pandas as pd
@@ -70,6 +70,7 @@ def printStatus(arduino, powerMeter):
     print('Current motor angle: ' + str(arduino.currentAngle) + '°')
 
 def plotData(fileName, xVals, yVals, xlabel, ylabel):
+    plt.figure(fileName)
     plt.plot(xVals, yVals)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
@@ -77,6 +78,10 @@ def plotData(fileName, xVals, yVals, xlabel, ylabel):
 
 def main():
     arduino, powerMeter = initDevices()
+    filePath = 'data/'
+    if not os.path.exists:
+        os.mkdir(filePath)
+        
     while True:
         clear()
         printStatus(arduino=arduino, powerMeter=powerMeter)
@@ -93,10 +98,10 @@ def main():
                 arduino.toggleMotorDirection()
 
             case num if 1 < num < 7: # step motor at varying speeds
-                arduino.stepMotor(mode, angle)
+                arduino.stepMotor(mode=mode, angle=angle)
 
             case 7: # satellite profile, step 5 deg, wait, record power, step,
-                # fileName = str(datetime.datetime.now().timestamp())
+                fileName = filePath + str(datetime.datetime.now().timestamp())
 
                 # power, loss, timeStamp = profiles.satelliteProfile(arduino, powerMeter)
 
@@ -108,15 +113,17 @@ def main():
                 pass
                 
             case 8: # calibration profile
-                # fileName = str(datetime.datetime.now().timestamp())
+                fileName = filePath + str(datetime.datetime.now().timestamp())
 
-                # power, loss, timeStamp = profiles.calibrateProfile(arduino, powerMeter)
+                asyncio.run(arduino.asyncStepMotor(mode=6, angle=720))
+                power, loss, timeStamp = asyncio.run(powerMeter.measure(duration=5000))
 
-                # plotData(fileName, timeStamp, loss, 'Timestamp', 'Loss (dB)')
+                plotData(fileName + '_loss', timeStamp, loss, 'Timestamp', 'Loss (dB)')
+                plotData(fileName + '_power', timeStamp, power, 'Timestamp', 'Power (W)')
 
-                # data = np.column_stack((power, loss, timeStamp))
-                # DF = pd.DataFrame(data)
-                # DF.to_csv(fileName + '.csv')
+                data = np.column_stack((power, loss, timeStamp))
+                DF = pd.DataFrame(data)
+                DF.to_csv(fileName + '.csv')
                 pass
 
             case 9: # quit

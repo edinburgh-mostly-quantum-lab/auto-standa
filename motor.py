@@ -46,3 +46,6 @@ class Motor():
         self.sendSerial(str(mode) + ',' + str(angle))
         self.calcAngle(angle)
         time.sleep(0.5)
+
+    async def asyncStepMotor(self, mode, angle):
+        self.stepMotor(mode=mode, angle=angle)
