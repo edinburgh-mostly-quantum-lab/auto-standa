@@ -1,13 +1,17 @@
 # Dependencies: pip install pyserial ThorlabsPM100 matplotlib
 
 import serial, os, time, csv, datetime, json, asyncio
-from ThorlabsPM100 import ThorlabsPM100, USBTMC
+import pandas as pd
 import numpy as np
+from ThorlabsPM100 import ThorlabsPM100, USBTMC
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
 statusMessage = ''
 fileName = ''
+
+powerMeter = ''
+arduino = ''
 
 # Init motor properties
 currentAngle = 0
@@ -25,35 +29,40 @@ menu = '''Select option:
 8. Calibrate
 9. Quit'''
 
-# Check if arduino is detected
-try:
-    arduinoPort = '/dev/ttyACM0'
-    arduino = serial.Serial(port=arduinoPort, baudrate=115200, timeout=0.1)
-except:
+def initDevices():
+    global arduino, arduinoStatus, arduinoMessage
+    global powerMeter, powerMeterStatus, powerMeterMessage
+    # Check if arduino is detected
     try:
-        arduinoPort = '/dev/ttyACM1'
+        arduinoPort = '/dev/ttyACM0'
         arduino = serial.Serial(port=arduinoPort, baudrate=115200, timeout=0.1)
     except:
-        arduinoStatus = 0
-        arduinoMessage = 'Arduino not found'
+        try:
+            arduinoPort = '/dev/ttyACM1'
+            arduino = serial.Serial(port=arduinoPort, baudrate=115200, timeout=0.1)
+        except:
+            arduinoStatus = 0
+            arduinoMessage = 'Arduino not found'
+        else:
+            arduinoStatus = 1
+            arduinoMessage = 'Arduino found at ' + arduinoPort
     else:
         arduinoStatus = 1
         arduinoMessage = 'Arduino found at ' + arduinoPort
-else:
-    arduinoStatus = 1
-    arduinoMessage = 'Arduino found at ' + arduinoPort
 
-# Check if power meter is detected
-try:
-    powerMeterPort = ''
-    inst = USBTMC(device=powerMeterPort)
-except:
-    powerMeterStatus = 0
-    powerMeterMessage = 'Power meter not found'
-else:
-    powerMeter = ThorlabsPM100(inst=inst)
-    powerMeterStatus = 1
-    powerMeterMessage = 'Power meter found at ' + powerMeterPort
+    # Check if power meter is detected
+    try:
+        powerMeterPort = '/dev/usbtmc0'
+        inst = USBTMC(device=powerMeterPort)
+    except:
+        powerMeterStatus = 0
+        powerMeterMessage = 'Power meter not found'
+    else:
+        powerMeter = ThorlabsPM100(inst=inst)
+        powerMeterStatus = 1
+        powerMeterMessage = 'Power meter found at ' + powerMeterPort
+
+        time.sleep(2)
 
 def sendSerial(data):
     data = '<' + str(data) + '>'
@@ -62,8 +71,6 @@ def sendSerial(data):
     except:
         # print("Simulating arduino: Sending " + data)
         pass
-    else:
-        print("Sending: " + data)
 
 def toggleDir():
     global currentDirection
@@ -135,63 +142,42 @@ def powerDataAcq():
         writer = csv.writer(f)
         writer.writerow(data)
 
-def calibrate():
-    global currentAngle, powerMeter
-    lossAngle = {}
-    try:
-        refPower = powerMeter.read
-    except:
-        refPower = 20
-
-    for x in range(0, int(360/5)):
-        try:
-            power = powerMeter.read
-        except:
-            power = refPower - x
-            
-        loss = -10*np.log10(np.divide(power, refPower))
-        lossAngle.update({loss:currentAngle})
-        stepMotor(6, 5)
-
-    with open('calibration.json', 'w') as f: 
-        f.write(json.dumps(lossAngle))
-
-    plotData(lossAngle.values(), lossAngle.keys(), 'Angle (°)', 'Loss (dB)')
-
-    # time.sleep(0.5)
-    # toggleDir()
-    # time.sleep(0.5)
-    # stepMotor(2, 350)
-    # time.sleep(0.5)
-    # toggleDir()
-
 def plotData(xVals, yVals, xlabel, ylabel):
     plt.plot(xVals, yVals)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.savefig(fileName + '.png')
 
-def satellitePass():
-    data = []
-    with open('calibration.json') as f:
-        lossAngle = json.load(f)
-
-    for x, (loss, angle) in enumerate(lossAngle.items()):
-        stepMotor(6, 5)
+async def loopMeaure():
+    for x in range(2500):
+        power = powerMeter.read
         timeStamp = datetime.datetime.now().timestamp()
-        data.append([loss, angle, timeStamp])
-    
-    with open(fileName  + '.csv', 'a') as f:
-        writer = csv.writer(f)
-        writer.writerows(data)
+        yield power, timeStamp
 
-    lossList = [losses[0] for losses in data]
-    angleList = [angles[1] for angles in data]
-    timeList = [times[2] for times in data]
-    print(angleList)
-    print(lossList)
-    print(timeList)
-    plotData(angleList, lossList, 'Angle (°)', 'Loss (dB)')
+async def measure():
+    refPower = powerMeter.read
+    powerList = []
+    timeStampList = []
+    lossList = []
+    async for power, timeStamp in loopMeaure():
+        powerList.append(power)
+        loss = -10*np.log10(np.divide(power, refPower))
+        lossList.append(loss)
+        timeStampList.append(timeStamp)
+
+    return powerList, lossList, timeStampList
+
+async def calibrateMotor():
+    arduino.write('<6,360>'.encode('utf-8'))
+
+async def satellitePass():
+    arduino.write('<6,350>'.encode('utf-8'))
+    time.sleep(13)
+    arduino.write('<1>'.encode('utf-8'))
+    time.sleep(1)
+    arduino.write('<6,350>'.encode('utf-8'))
+    time.sleep(13)
+    arduino.write('<1>'.encode('utf-8'))
 
 def clear():
     if os.name == 'posix':  # macOS and Linux
@@ -200,30 +186,7 @@ def clear():
     elif os.name == 'nt': # Windows
         _ = os.system('cls')
 
-async def powerMeterRead(duration):
-    global powerMeter
-    data = []
-    for x in range(0,duration):
-        if powerMeterStatus == 1:
-            powerMeterReading = powerMeter.read
-        else:
-            powerMeterReading = x
-        timeStamp = datetime.datetime.now().timestamp()
-        await asyncio.sleep(1)
-        data.append({powerMeterReading: timeStamp})
-    return data
-
-def writeToCSV(data):
-    fileName = str(datetime.datetime.now())
-    with open(fileName  + '.csv', 'a') as f:
-        writer = csv.writer(f)
-        writer.writerow(data)
-
-async def calibrateMotor():
-    global currentAngle
-    stepMotor(6,360)
-
-async def main():
+def main():
     global currentAngle, fileName
     while True:
         fileName = str(datetime.datetime.now())
@@ -244,17 +207,20 @@ async def main():
 
             case num if 1 < num < 7: # step motor at varying speeds
                 stepMotor(mode, fullAngle)
-                # powerDataAcq()
+                powerDataAcq()
 
             case 7: # satellite profile, step 5 deg, wait, record power, step,
-                satellitePass()
+                asyncio.run(satellitePass())
                 
-            case 8:
-                async for powerData in powerMeterRead(12):
-                    await calibrateMotor()
+            case 8: # calibration profile
+                asyncio.run(calibrateMotor())
+                power, loss, timeStamp = asyncio.run(measure())
 
-                with open('calibration.json', 'w') as f: 
-                    f.write(json.dumps(powerData, indent=2))
+                plotData(fileName, timeStamp, loss, 'Timestamp', 'Loss (dB)')
+
+                data = np.column_stack((power, loss, timeStamp))
+                DF = pd.DataFrame(data)
+                DF.to_csv(fileName + '.csv')
 
             case 9: # quit
                 break
@@ -263,4 +229,4 @@ async def main():
                 print('Invalid input')
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()
