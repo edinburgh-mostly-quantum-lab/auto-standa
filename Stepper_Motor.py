@@ -13,6 +13,9 @@ fileName = ''
 powerMeter = ''
 arduino = ''
 
+arduinoMessage = ''
+powerMeterMessage = ''
+
 # Init motor properties
 currentAngle = 0
 currentDirection = 0
@@ -142,7 +145,7 @@ def powerDataAcq():
         writer = csv.writer(f)
         writer.writerow(data)
 
-def plotData(xVals, yVals, xlabel, ylabel):
+def plotData(fileName, xVals, yVals, xlabel, ylabel):
     plt.plot(xVals, yVals)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
@@ -187,6 +190,7 @@ def clear():
         _ = os.system('cls')
 
 def main():
+    initDevices()
     global currentAngle, fileName
     while True:
         fileName = str(datetime.datetime.now())
