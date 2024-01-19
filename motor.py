@@ -15,6 +15,13 @@ class Motor():
         else:
             time.sleep(2)
         return self.motor
+    
+    def sendSerial(self, data):
+        data = '<' + str(data) + '>'
+        try:
+            self.motor.write(data.encode('utf-8'))
+        except:
+            print("Simulating arduino: Sending " + data)
 
     def toggleMotorDirection(self):
         self.sendSerial('1')
