@@ -3,11 +3,14 @@ import powermeter
 import profiles
 
 import os
-import pandas as pd
 import asyncio
+import datetime
+import json
+import csv
+import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-import datetime
+from scipy.signal import find_peaks
 
 menu = '''Select option:
 0. Reset current angle to zero
@@ -76,6 +79,9 @@ def plotData(fileName, xVals, yVals, xlabel, ylabel):
     plt.ylabel(ylabel)
     plt.savefig(fileName + '.png')
 
+def writeToCSV(data):
+    pass
+
 def main():
     arduino, powerMeter = initDevices()
     filePath = 'data/'
@@ -118,13 +124,29 @@ def main():
                 asyncio.run(arduino.asyncStepMotor(mode=6, angle=720))
                 power, loss, timeStamp = asyncio.run(powerMeter.measure(duration=5000))
 
-                plotData(fileName + '_loss', timeStamp, loss, 'Timestamp', 'Loss (dB)')
-                plotData(fileName + '_power', timeStamp, power, 'Timestamp', 'Power (W)')
+                # filter data for full cycle
+                peaks, _ = find_peaks(loss, height=0)
+                filterLoss = loss[0:peaks[-1]]
+                filterTime = timeStamp[0:peaks[-1]]
+                maxTime = max(filterTime)
+                minTime = min(filterTime)
+                timeRange = maxTime - minTime
 
-                data = np.column_stack((power, loss, timeStamp))
-                DF = pd.DataFrame(data)
-                DF.to_csv(fileName + '.csv')
-                pass
+                # normalise to 0 to 360
+                angle = [(value - minTime) / timeRange * 360 for value in filterTime]
+
+                # build dictionary of angles and loss
+                angleRound = [round(num) for num in angle]
+                df = pd.DataFrame({
+                    'loss': filterLoss,
+                    'angle': angleRound
+                })
+                angleDict = df.groupby('angle').mean()['loss'].to_dict()
+                
+                # write dictionary to file
+                with open('calibration.json', 'w') as f:
+                    json.dump(angleDict, f, indent=2)
+                plotData('calibration.png', angleDict.keys(), angleDict.values(), 'Angle (°)', 'Loss (dB)')
 
             case 9: # quit
                 break
