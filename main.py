@@ -32,7 +32,10 @@ def clear():
         _ = os.system('cls')
 
 def initDevices():
-    arduino = motor.Motor(port='/dev/ttyACM0')
+    try:
+        arduino = motor.Motor(port='/dev/ttyACM0')
+    except:
+        arduino = motor.Motor(port='/dev/ttyACM1')
     arduino.initMotor()
 
     powerMeter = powermeter.PowerMeter(port='/dev/usbtmc0')
