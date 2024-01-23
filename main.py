@@ -1,4 +1,5 @@
-from arduinomotor import Motor
+# from arduinomotor import Motor
+from standamotor import Motor
 import powermeter
 import profiles
 
