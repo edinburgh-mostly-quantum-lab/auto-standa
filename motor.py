@@ -11,7 +11,7 @@ class Motor():
         try:
             self.motor = serial.Serial(port=self.port, baudrate=115200, timeout=0.1)
         except:
-            print("No power meter found")
+            print("No motor found")
         else:
             time.sleep(2)
         return self.motor
