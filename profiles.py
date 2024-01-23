@@ -1,4 +1,4 @@
-import motor
+import motormotor
 import powermeter
 
 import time
@@ -8,22 +8,22 @@ async def measurePower(powerMeter, duration):
     power, loss, timeStamp = powerMeter.measure(duration)
     return power, loss, timeStamp
 
-async def calibrateMotor(arduino):
-    arduino.stepMotor(6,360)
+async def calibrateMotor(motor):
+    motor.stepMotor(6,360)
 
-async def calibrateProfile(arduino, powerMeter):
-    asyncio.run(calibrateMotor(arduino))
+async def calibrateProfile(motor, powerMeter):
+    asyncio.run(calibrateMotor(motor))
     power, loss, timeStamp = asyncio.run(measurePower(powerMeter, 2500))
     return power, loss, timeStamp
 
 # async def satelliteMotor():
-#     arduino.stepMotor(6,360)
+#     motor.stepMotor(6,360)
 #     time.sleep(13)
-#     arduino.toggleMotorDirection()
+#     motor.toggleMotorDirection()
 #     time.sleep(1)
-#     arduino.stepMotor(6,360)
+#     motor.stepMotor(6,360)
 #     time.sleep(13)
-#     arduino.toggleMotorDirection()
+#     motor.toggleMotorDirection()
 
 # async def satellitePower():
 #     powerMeter.measure(2500)

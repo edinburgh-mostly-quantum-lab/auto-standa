@@ -1,4 +1,4 @@
-import motor
+from arduinomotor import Motor
 import powermeter
 import profiles
 
@@ -34,15 +34,15 @@ def clear():
 
 def initDevices():
     try:
-        arduino = motor.Motor(port='/dev/ttyACM0')
+        motor = Motor(port='/dev/ttyACM0')
     except:
-        arduino = motor.Motor(port='/dev/ttyACM1')
-    arduino.initMotor()
+        motor = Motor(port='/dev/ttyACM1')
+    motor.initMotor()
 
     powerMeter = powermeter.PowerMeter(port='/dev/usbtmc0')
     powerMeter.initPowerMeter()
 
-    return arduino, powerMeter
+    return motor, powerMeter
 
 def parseInput(input): # seperate input into mode, fullAngle, stepAngle
     inputList = input.strip().split(',')
@@ -53,12 +53,12 @@ def parseInput(input): # seperate input into mode, fullAngle, stepAngle
         fullAngle = 0
     return mode, fullAngle
 
-def printStatus(arduino, powerMeter):
-    if arduino.port:
-        arduinoStatus = 'Arduino found at ' + arduino.port
+def printStatus(motor, powerMeter):
+    if motor.port:
+        motorStatus = 'Motor found at ' + motor.port
     else:
-        arduinoStatus = 'No arduino found'
-    print(arduinoStatus)
+        motorStatus = 'No motor found'
+    print(motorStatus)
     if powerMeter.port:
         powerMeterStatus = 'Power meter found at ' + powerMeter.port
     else:
@@ -69,12 +69,12 @@ def printStatus(arduino, powerMeter):
     except:
         print('Current power: 0 W')
 
-    if arduino.currentDirection == 0:
+    if motor.currentDirection == 0:
         dirMessage = 'Motor direction: Forwards'
     else:
         dirMessage = 'Motor direction: Backwards'
     print(dirMessage)
-    print('Current motor angle: ' + str(arduino.currentAngle) + '°')
+    print('Current motor angle: ' + str(motor.currentAngle) + '°')
 
 def plotData(fileName, xVals, yVals, xlabel, ylabel):
     plt.figure(fileName)
@@ -87,14 +87,14 @@ def writeToCSV(data):
     pass
 
 def main():
-    arduino, powerMeter = initDevices()
+    motor, powerMeter = initDevices()
     filePath = 'data/'
     if not os.path.exists:
         os.mkdir(filePath)
         
     while True:
         clear()
-        printStatus(arduino=arduino, powerMeter=powerMeter)
+        printStatus(motor=motor, powerMeter=powerMeter)
         print(menu)
 
         userInput = input('<Mode>,<Angle>: ')
@@ -105,13 +105,13 @@ def main():
 
         match int(mode):
             case 0: # reset angle
-                arduino.currentAngle = 0
+                motor.currentAngle = 0
 
             case 1: # toggle motor direction
-                arduino.toggleMotorDirection()
+                motor.toggleMotorDirection()
 
             case num if 1 < num < 7: # step motor at varying speeds
-                arduino.stepMotor(mode=mode, angle=angle)
+                motor.stepMotor(mode=mode, angle=angle)
 
             case 7:
                 if os.path.isfile('calibration.json'):
@@ -125,13 +125,13 @@ def main():
                     
                     targetAngle = data[closestLoss]
 
-                    deltaAngle = targetAngle - arduino.currentAngle
+                    deltaAngle = targetAngle - motor.currentAngle
                     if deltaAngle < 0:
-                        arduino.toggleMotorDirection()
+                        motor.toggleMotorDirection()
                         deltaAngle = -1*deltaAngle
-                        arduino.stepMotor(6,deltaAngle)
+                        motor.stepMotor(6,deltaAngle)
                         time.sleep(1)
-                        arduino.toggleMotorDirection()
+                        motor.toggleMotorDirection()
                         
                 else:
                     print("No calibration file found")
@@ -139,7 +139,7 @@ def main():
             case 8: # satellite profile, step 5 deg, wait, record power, step,
                 fileName = filePath + str(datetime.datetime.now().timestamp())
 
-                # power, loss, timeStamp = profiles.satelliteProfile(arduino, powerMeter)
+                # power, loss, timeStamp = profiles.satelliteProfile(motor, powerMeter)
 
                 # plotData(fileName, timeStamp, loss, 'Timestamp', 'Loss (dB)')
 
@@ -151,7 +151,7 @@ def main():
             case 9: # calibration profile
                 fileName = filePath + str(datetime.datetime.now().timestamp())
 
-                asyncio.run(arduino.asyncStepMotor(mode=6, angle=720))
+                asyncio.run(motor.asyncStepMotor(mode=6, angle=720))
                 power, loss, timeStamp = asyncio.run(powerMeter.measure(duration=5000))
 
                 date = [datetime.fromtimestamp(ts) for ts in timeStamp]
