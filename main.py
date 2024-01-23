@@ -4,13 +4,13 @@ import profiles
 
 import os
 import asyncio
+import time
 import datetime
 import json
 import csv
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.signal import find_peaks
 
 menu = '''Select option:
 0. Reset current angle to zero
@@ -20,9 +20,10 @@ menu = '''Select option:
 4. Step motor: Quarter step
 5. Step motor: Eighth step
 6. Step motor: Sixteenth step
-7. Motor profile: Satellite Sweep
-8. Calibrate
-9. Quit'''
+7. Rotate to loss level
+8. Motor profile: Satellite Sweep
+9. Calibrate
+Q. Quit'''
 
 def clear():
     if os.name == 'posix':  # macOS and Linux
@@ -97,6 +98,9 @@ def main():
         print(menu)
 
         userInput = input('<Mode>,<Angle>: ')
+        if userInput == 'q' or userInput == 'Q':
+            break
+
         mode, angle = parseInput(input=userInput)
 
         match int(mode):
@@ -109,7 +113,30 @@ def main():
             case num if 1 < num < 7: # step motor at varying speeds
                 arduino.stepMotor(mode=mode, angle=angle)
 
-            case 7: # satellite profile, step 5 deg, wait, record power, step,
+            case 7:
+                if os.path.isfile('calibration.json'):
+                    targetLoss = angle
+                    # load calibration file
+                    with open('calibration.json', 'r') as file:
+                        data = json.load(file)
+
+                    # find closest loss value
+                    closestLoss = min(data, key=lambda x: abs(data[x] - targetLoss))
+                    
+                    targetAngle = data[closestLoss]
+
+                    deltaAngle = targetAngle - arduino.currentAngle
+                    if deltaAngle < 0:
+                        arduino.toggleMotorDirection()
+                        deltaAngle = -1*deltaAngle
+                        arduino.stepMotor(6,deltaAngle)
+                        time.sleep(1)
+                        arduino.toggleMotorDirection()
+                        
+                else:
+                    print("No calibration file found")
+
+            case 8: # satellite profile, step 5 deg, wait, record power, step,
                 fileName = filePath + str(datetime.datetime.now().timestamp())
 
                 # power, loss, timeStamp = profiles.satelliteProfile(arduino, powerMeter)
@@ -121,38 +148,42 @@ def main():
                 # DF.to_csv(fileName + '.csv')
                 pass
                 
-            case 8: # calibration profile
+            case 9: # calibration profile
                 fileName = filePath + str(datetime.datetime.now().timestamp())
 
                 asyncio.run(arduino.asyncStepMotor(mode=6, angle=720))
                 power, loss, timeStamp = asyncio.run(powerMeter.measure(duration=5000))
 
-                # filter data for full cycle
-                peaks, _ = find_peaks(loss, height=0)
-                filterLoss = loss[0:peaks[-1]]
-                filterTime = timeStamp[0:peaks[-1]]
-                maxTime = max(filterTime)
-                minTime = min(filterTime)
+                date = [datetime.fromtimestamp(ts) for ts in timeStamp]
+                time = [(dt - date[0]).total_seconds() for dt in date]
+
+                # find the index where the steep rise begins
+                threshold = 0.01
+                rise_start_index = np.argmax(np.gradient(loss) > threshold)
+
+                # truncate the data up to the identified index
+                truncTime = time[:rise_start_index]
+                truncLoss = loss[:rise_start_index]
+
+                maxTime = max(truncTime)
+                minTime = min(truncTime)
                 timeRange = maxTime - minTime
 
-                # normalise to 0 to 360
-                angle = [(value - minTime) / timeRange * 360 for value in filterTime]
+                # normalise between 0 and 359
+                angle = [(value - minTime) / timeRange * 359 for value in truncTime]
 
                 # build dictionary of angles and loss
                 angleRound = [round(num) for num in angle]
                 df = pd.DataFrame({
-                    'loss': filterLoss,
+                    'loss': truncLoss,
                     'angle': angleRound
                 })
                 angleDict = df.groupby('angle').mean()['loss'].to_dict()
                 
                 # write dictionary to file
-                with open('calibration.json', 'w') as f:
-                    json.dump(angleDict, f, indent=2)
+                with open('calibration.json', 'w') as file:
+                    json.dump(angleDict, file, indent=2)
                 plotData('calibration.png', angleDict.keys(), angleDict.values(), 'Angle (°)', 'Loss (dB)')
-
-            case 9: # quit
-                break
 
             case _:
                 print('Invalid input')
