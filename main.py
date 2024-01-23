@@ -155,14 +155,14 @@ def main():
                 power, loss, timeStamp = asyncio.run(powerMeter.measure(duration=5000))
 
                 date = [datetime.fromtimestamp(ts) for ts in timeStamp]
-                time = [(dt - date[0]).total_seconds() for dt in date]
+                seconds = [(dt - date[0]).total_seconds() for dt in date]
 
                 # find the index where the steep rise begins
                 threshold = 0.01
                 rise_start_index = np.argmax(np.gradient(loss) > threshold)
 
                 # truncate the data up to the identified index
-                truncTime = time[:rise_start_index]
+                truncTime = seconds[:rise_start_index]
                 truncLoss = loss[:rise_start_index]
 
                 maxTime = max(truncTime)

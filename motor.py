@@ -1,4 +1,4 @@
-import serial, time, asyncio
+import serial, time
 
 class Motor():
     def __init__(self, port=None):
