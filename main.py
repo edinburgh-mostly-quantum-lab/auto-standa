@@ -16,6 +16,11 @@ Step = typing.NewType("Step", int)
 NoiseDB = typing.NewType("NoiseDB", float)
 
 @dataclasses.dataclass
+class NoiseMap:
+    noise: NoiseDB
+    step: Step
+
+@dataclasses.dataclass
 class Motor:
     full_step: Step
     port: str = None
@@ -23,7 +28,7 @@ class Motor:
     current_step: Step = None
     current_angle: Angle = None
     current_noise: NoiseDB = None
-    noise_map: "list[dict[NoiseDB:Step]]" = None
+    noise_map: NoiseMap = None
 
 @dataclasses.dataclass
 class PowerMeter:
@@ -89,8 +94,16 @@ def get_motor_status(motor: Motor) -> None:
     motor.current_angle = step_to_angle(step=motor.current_step, full_step=motor.full_step)
     motor.motor.close_device()
 
+def set_zero_point(motor: Motor) -> None:
+    motor.motor.open_device()
+    motor.motor.command_zero()
+    motor.motor.close_device()
+    get_motor_status(motor=motor)
+
 def print_motor_status(motor: Motor) -> None:
     get_motor_status(motor=motor)
+    if motor.current_step == motor.full_step:
+            set_zero_point(motor=motor)
     print("Standa motor connected at port:", motor.port)
     print("Current angle:", motor.current_angle)
     print("Current step:", motor.current_step, "/", motor.full_step)
@@ -103,31 +116,34 @@ def print_power_meter_status(powermeter: PowerMeter) -> None:
 
 def step_motor(motor: Motor, step: Step) -> None:
     motor.motor.open_device()
-    motor.motor.command_movr(step, 0)
+    motor.motor.command_movr(int(step), 0)
     motor.motor.command_wait_for_stop(refresh_interval_ms=10)
     motor.motor.close_device()
-
-def set_zero_point(motor: Motor) -> None:
-    motor.motor.open_device()
-    motor.motor.command_zero()
-    motor.motor.close_device()
-    get_motor_status(motor=motor)
 
 def return_to_zero(motor: Motor) -> None:
     step_delta = -motor.current_step
     step_motor(motor=motor, step=step_delta)
 
-def calibrate_noise(motor: Motor, powermeter: PowerMeter) -> None:
+def calibrate_noise(motor: Motor, powermeter: PowerMeter):
     return_to_zero(motor=motor)
-
+    noise_map = {}
+    step = angle_to_step(angle=1, full_step=motor.full_step)
+    for i in range(0, 360):
+        noise_map[i] = powermeter.powermeter.read
+        step_motor(motor=motor, step=step)
+    
+    with open("calibration.json", "w") as file:
+        json.dump(noise_map, file, indent=4)
 
 def main() -> None:
     while True:
         clear()
         motor = connect_motor()
         print_motor_status(motor=motor)
+
         powermeter = connect_power_meter()
         print_power_meter_status(powermeter=powermeter)
+
         print("Select option:")
         for key, value in menu_dict.items():
             print(key + ")", value)

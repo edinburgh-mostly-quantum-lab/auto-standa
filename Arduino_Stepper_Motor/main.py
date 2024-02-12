@@ -1,7 +1,7 @@
 # from arduinomotor import Motor
-from standamotor import Motor
-import powermeter
-import profiles
+from Arduino_Stepper_Motor.standamotor import Motor
+import Arduino_Stepper_Motor.powermeter as powermeter
+import Arduino_Stepper_Motor.profiles as profiles
 
 import os
 import asyncio

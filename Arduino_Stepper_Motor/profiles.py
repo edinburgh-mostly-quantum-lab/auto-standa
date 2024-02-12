@@ -1,5 +1,5 @@
 import motormotor
-import powermeter
+import Arduino_Stepper_Motor.powermeter as powermeter
 
 import time
 import asyncio
