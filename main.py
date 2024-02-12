@@ -20,7 +20,7 @@ NoiseDB = typing.NewType("NoiseDB", float)
 class Motor:
     full_step: Step
     port: str = None
-    motor: ximc.Axis
+    motor: ximc.Axis = None
     current_step: Step = None
     current_angle: Angle = None
     current_noise: NoiseDB = None
@@ -39,12 +39,23 @@ menu_dict = {
     "Q": "Quit"
 }
 
-def connect_motor(port: str) -> Motor:
-    motor = Motor(
-        full_step = 28800,
-        port = port,
-        motor = ximc.Axis('xi-com:' + port),
-    )
+def connect_motor() -> Motor:
+    port_num = 0
+    while True:
+        port = '/dev/ttyACM' + str(port_num)
+        motor = Motor(
+            full_step = 28800,
+            port = port,
+            motor = ximc.Axis('xi-com:' + port),
+        )
+        try:
+            motor.motor.open_device()
+            motor.motor.get_status()
+            motor.motor.close_device()
+        except:
+            port_num += 1
+        else:
+            break
     return motor
 
 def angle_to_step(angle: Angle, full_step: Step) -> Step:
@@ -82,14 +93,7 @@ def step_motor(motor: Motor, step: Step) -> None:
 def main() -> None:
     while True:
         clear()
-        try:
-            motor = connect_motor('/dev/ttyACM0')
-            motor.motor.open_device()
-            motor.motor.get_status()
-            motor.motor.close_device()
-        except:
-            motor = connect_motor('/dev/ttyACM1')
-            
+        motor = connect_motor()
         print_motor_status(motor=motor)
         print("Select option:")
         for key, value in menu_dict.items():
