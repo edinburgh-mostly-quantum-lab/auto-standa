@@ -1,5 +1,4 @@
 import os
-import time
 import dataclasses
 import typing
 import json
@@ -36,7 +35,8 @@ menu_dict = {
     "0": "Set zero point",
     "1": "Rotate motor by angle",
     "2": "Rotate motor by step",
-    "3": "Calibrate noise map",
+    "3": "Return to zero",
+    "9": "Calibrate noise map",
     "Q": "Quit"
 }
 
@@ -76,11 +76,11 @@ def connect_power_meter() -> PowerMeter:
     return powermeter
 
 def angle_to_step(angle: Angle, full_step: Step) -> Step:
-    step = int(angle / 360 * full_step)
+    step = Step((angle / 360 * full_step))
     return step
 
 def step_to_angle(step: Step, full_step: Step) -> Angle:
-    angle = int(step / full_step * 360)
+    angle = Angle((step / full_step * 360))
     return angle
 
 def get_motor_status(motor: Motor) -> None:
@@ -91,27 +91,35 @@ def get_motor_status(motor: Motor) -> None:
 
 def print_motor_status(motor: Motor) -> None:
     get_motor_status(motor=motor)
-    print("Standa motor ready")
-    print("Port:", motor.port)
+    print("Standa motor connected at port:", motor.port)
     print("Current angle:", motor.current_angle)
-    print("Current step:", motor.current_step)
+    print("Current step:", motor.current_step, "/", motor.full_step)
     print("Estimated noise level:", motor.current_noise)
 
 def print_power_meter_status(powermeter: PowerMeter) -> None:
-    print("Power meter ready")
-    print("Port:", powermeter.port)
+    print("Power meter connected at port:", powermeter.port)
     powermeter.current_power = powermeter.powermeter.read
     print("Power:", powermeter.current_power, "W")
 
 def step_motor(motor: Motor, step: Step) -> None:
-    moving = ''
     motor.motor.open_device()
     motor.motor.command_movr(step, 0)
-    time.sleep(0.5)
-    while moving != 'MoveState.0':
-        moving = str(motor.motor.get_status().MoveSts)
+    motor.motor.command_wait_for_stop(refresh_interval_ms=10)
     motor.motor.close_device()
-    print("Motor operation complete")
+
+def set_zero_point(motor: Motor) -> None:
+    motor.motor.open_device()
+    motor.motor.command_zero()
+    motor.motor.close_device()
+    get_motor_status(motor=motor)
+
+def return_to_zero(motor: Motor) -> None:
+    step_delta = -motor.current_step
+    step_motor(motor=motor, step=step_delta)
+
+def calibrate_noise(motor: Motor, powermeter: PowerMeter) -> None:
+    return_to_zero(motor=motor)
+
 
 def main() -> None:
     while True:
@@ -124,17 +132,23 @@ def main() -> None:
         for key, value in menu_dict.items():
             print(key + ")", value)
         user_input = input()
-
         if user_input.lower() == 'q':
             break
+        try:
+            option = int(user_input)
+        except:
+            print("Invalid input")
+    
+        if option == 0:
+            set_zero_point(motor=motor)
+            option = -1
 
-        option = int(user_input)
         while option == 1 or option == 2:
             clear()
             print_motor_status(motor=motor)
             user_input = input("Selected option: " + menu_dict.get(str(option)) + "\nEnter number or q to return to previous menu: ")
             if user_input.lower() == 'q':
-                option = 0
+                option = -1
                 break
             try:
                 step = int(user_input)
@@ -144,6 +158,12 @@ def main() -> None:
                 if option == 1:
                     step = angle_to_step(angle=step, full_step=motor.full_step)
                 step_motor(motor=motor, step=step)
+
+        if option == 3:
+            return_to_zero(motor=motor)
+
+        if option == 9:
+            calibrate_noise(motor=motor, powermeter=powermeter)
 
 if '__main__' == __name__:
     main()
