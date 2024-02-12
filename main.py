@@ -29,6 +29,7 @@ class Motor:
 @dataclasses.dataclass
 class PowerMeter:
     port: str
+    powermeter: ThorlabsPM100
     current_power: str = None
 
 menu_dict = {
@@ -58,6 +59,22 @@ def connect_motor() -> Motor:
             break
     return motor
 
+def connect_power_meter() -> PowerMeter:
+    port_num = 0
+    while True:
+        port = '/dev/usbtmc' + str(port_num)
+        try:
+            inst = USBTMC(device=port)     
+        except:
+            port_num += 1
+        else:
+            break
+    powermeter = PowerMeter(
+        port = port,
+        powermeter = ThorlabsPM100(inst=inst)
+    )
+    return powermeter
+
 def angle_to_step(angle: Angle, full_step: Step) -> Step:
     step = int(angle / 360 * full_step)
     return step
@@ -74,11 +91,17 @@ def get_motor_status(motor: Motor) -> None:
 
 def print_motor_status(motor: Motor) -> None:
     get_motor_status(motor=motor)
-    print("Device ready")
+    print("Standa motor ready")
     print("Port:", motor.port)
     print("Current angle:", motor.current_angle)
     print("Current step:", motor.current_step)
     print("Estimated noise level:", motor.current_noise)
+
+def print_power_meter_status(powermeter: PowerMeter) -> None:
+    print("Power meter ready")
+    print("Port:", powermeter.port)
+    powermeter.current_power = powermeter.powermeter.read
+    print("Power:", powermeter.current_power, "W")
 
 def step_motor(motor: Motor, step: Step) -> None:
     moving = ''
@@ -95,6 +118,8 @@ def main() -> None:
         clear()
         motor = connect_motor()
         print_motor_status(motor=motor)
+        powermeter = connect_power_meter()
+        print_power_meter_status(powermeter=powermeter)
         print("Select option:")
         for key, value in menu_dict.items():
             print(key + ")", value)
