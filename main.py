@@ -46,8 +46,7 @@ menu_dict = {
 }
 
 def connect_motor() -> Motor:
-    port_num = 0
-    while True:
+    for port_num in range(0,11):
         port = '/dev/ttyACM' + str(port_num)
         motor = Motor(
             full_step = 28800,
@@ -59,25 +58,31 @@ def connect_motor() -> Motor:
             motor.motor.get_status()
             motor.motor.close_device()
         except:
-            port_num += 1
+            motor = Motor(
+            full_step = 28800,
+            port = None,
+            motor = None,
+        )
         else:
             break
     return motor
 
 def connect_power_meter() -> PowerMeter:
-    port_num = 0
-    while True:
+    for port_num in range(0,11):
         port = '/dev/usbtmc' + str(port_num)
         try:
-            inst = USBTMC(device=port)     
+            inst = USBTMC(device=port)
+            powermeter = PowerMeter(
+                port = port,
+                powermeter = ThorlabsPM100(inst=inst)
+            )
         except:
-            port_num += 1
+            powermeter = PowerMeter(
+                port = None,
+                powermeter = None
+            )
         else:
             break
-    powermeter = PowerMeter(
-        port = port,
-        powermeter = ThorlabsPM100(inst=inst)
-    )
     return powermeter
 
 def angle_to_step(angle: Angle, full_step: Step) -> Step:
@@ -89,16 +94,22 @@ def step_to_angle(step: Step, full_step: Step) -> Angle:
     return angle
 
 def get_motor_status(motor: Motor) -> None:
-    motor.motor.open_device()
-    motor.current_step = motor.motor.get_status().CurPosition
-    motor.current_angle = step_to_angle(step=motor.current_step, full_step=motor.full_step)
-    motor.motor.close_device()
+    try:
+        motor.motor.open_device()
+        motor.current_step = motor.motor.get_status().CurPosition
+        motor.current_angle = step_to_angle(step=motor.current_step, full_step=motor.full_step)
+        motor.motor.close_device()
+    except:
+        pass
 
 def set_zero_point(motor: Motor) -> None:
-    motor.motor.open_device()
-    motor.motor.command_zero()
-    motor.motor.close_device()
-    get_motor_status(motor=motor)
+    try:
+        motor.motor.open_device()
+        motor.motor.command_zero()
+        motor.motor.close_device()
+        get_motor_status(motor=motor)
+    except:
+        pass
 
 def print_motor_status(motor: Motor) -> None:
     get_motor_status(motor=motor)
@@ -110,19 +121,28 @@ def print_motor_status(motor: Motor) -> None:
     print("Estimated noise level:", motor.current_noise)
 
 def print_power_meter_status(powermeter: PowerMeter) -> None:
-    print("Power meter connected at port:", powermeter.port)
-    powermeter.current_power = powermeter.powermeter.read
-    print("Power:", powermeter.current_power, "W")
+    try:
+        print("Power meter connected at port:", powermeter.port)
+        powermeter.current_power = powermeter.powermeter.read
+        print("Power:", powermeter.current_power, "W")
+    except:
+        pass
 
 def step_motor(motor: Motor, step: Step) -> None:
-    motor.motor.open_device()
-    motor.motor.command_movr(int(step), 0)
-    motor.motor.command_wait_for_stop(refresh_interval_ms=10)
-    motor.motor.close_device()
+    try:
+        motor.motor.open_device()
+        motor.motor.command_movr(int(step), 0)
+        motor.motor.command_wait_for_stop(refresh_interval_ms=10)
+        motor.motor.close_device()
+    except:
+        pass
 
 def return_to_zero(motor: Motor) -> None:
-    step_delta = -motor.current_step
-    step_motor(motor=motor, step=step_delta)
+    try:
+        step_delta = -motor.current_step
+        step_motor(motor=motor, step=step_delta)
+    except:
+        pass
 
 def calibrate_noise(motor: Motor, powermeter: PowerMeter):
     return_to_zero(motor=motor)
