@@ -1,6 +1,7 @@
 import os
 import dataclasses
 import typing
+import math
 import json
 import libximc.highlevel as ximc
 from ThorlabsPM100 import ThorlabsPM100, USBTMC
@@ -14,6 +15,9 @@ def clear() -> None:
 Angle = typing.NewType("Angle", int)
 Step = typing.NewType("Step", int)
 NoiseDB = typing.NewType("NoiseDB", float)
+Power = typing.NewType("Power", float)
+
+ref_power = 0
 
 @dataclasses.dataclass
 class NoiseMap:
@@ -115,14 +119,26 @@ def print_motor_status(motor: Motor) -> None:
     get_motor_status(motor=motor)
     if motor.current_step == motor.full_step:
             set_zero_point(motor=motor)
-    print("Standa motor connected at port:", motor.port)
+    if motor.port:
+        print("Standa motor connected at port:", motor.port)
+    else:
+        print("Standa motor not found")
     print("Current angle:", motor.current_angle)
     print("Current step:", motor.current_step, "/", motor.full_step)
+    try:
+        motor.noise_map = get_noise_map()
+    except:
+        print("No calibration file found")
+    else:
+        print("Calibration file found")
     print("Estimated noise level:", motor.current_noise)
 
 def print_power_meter_status(powermeter: PowerMeter) -> None:
     try:
-        print("Power meter connected at port:", powermeter.port)
+        if powermeter.port:
+            print("Power meter connected at port:", powermeter.port)
+        else:
+            print("Power meter not found")
         powermeter.current_power = powermeter.powermeter.read
         print("Power:", powermeter.current_power, "W")
     except:
@@ -154,6 +170,19 @@ def calibrate_noise(motor: Motor, powermeter: PowerMeter):
     
     with open("calibration.json", "w") as file:
         json.dump(noise_map, file, indent=4)
+
+def set_ref_power(powermeter: PowerMeter) -> Power:
+    ref_power = Power(powermeter.powermeter.read)
+    return ref_power
+
+def get_noise_map():
+    with open("calibration.json", "r") as file:
+        noise_map = dict(json.load(file))
+        return noise_map
+
+def calc_noise_level(ref_power: float, current_power: float) -> NoiseDB:
+    noise = NoiseDB(10 * math.log10(current_power/ref_power))
+    return noise
 
 def main() -> None:
     while True:
@@ -197,6 +226,9 @@ def main() -> None:
 
         if option == 3:
             return_to_zero(motor=motor)
+
+        if option == 8:
+            set_ref_power(powermeter=powermeter)
 
         if option == 9:
             calibrate_noise(motor=motor, powermeter=powermeter)
