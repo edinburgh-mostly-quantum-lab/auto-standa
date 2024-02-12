@@ -1,193 +1,120 @@
-# from arduinomotor import Motor
-from standamotor import Motor
-import powermeter
-import profiles
-
 import os
-import asyncio
 import time
-import datetime
+import dataclasses
+import typing
 import json
-import csv
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
+import libximc.highlevel as ximc
+from ThorlabsPM100 import ThorlabsPM100, USBTMC
 
-menu = '''Select option:
-0. Reset current angle to zero
-1. Toggle motor direction
-2. Step motor: Full step
-3. Step motor: Half step
-4. Step motor: Quarter step
-5. Step motor: Eighth step
-6. Step motor: Sixteenth step
-7. Rotate to loss level
-8. Motor profile: Satellite Sweep
-9. Calibrate
-Q. Quit'''
-
-def clear():
-    if os.name == 'posix':  # macOS and Linux
-        _ = os.system('clear')
-    
-    elif os.name == 'nt': # Windows
-        _ = os.system('cls')
-
-def initDevices():
-    try:
-        motor = Motor(port='/dev/ttyACM0')
-    except:
-        motor = Motor(port='/dev/ttyACM1')
-    motor.initMotor()
-
-    powerMeter = powermeter.PowerMeter(port='/dev/usbtmc0')
-    powerMeter.initPowerMeter()
-
-    return motor, powerMeter
-
-def parseInput(input): # seperate input into mode, fullAngle, stepAngle
-    inputList = input.strip().split(',')
-    mode = inputList[0]
-    try:
-        fullAngle = inputList[1]
-    except:
-        fullAngle = 0
-    return mode, fullAngle
-
-def printStatus(motor, powerMeter):
-    if motor.port:
-        motorStatus = 'Motor found at ' + motor.port
+def clear() -> None:
+    if os.name == 'nt':
+        _ = os.system("cls")
     else:
-        motorStatus = 'No motor found'
-    print(motorStatus)
-    if powerMeter.port:
-        powerMeterStatus = 'Power meter found at ' + powerMeter.port
-    else:
-        powerMeterStatus = 'No power meter found'
-    print(powerMeterStatus)
-    try:
-        print('Current power: ' + str(powerMeter.read()) + ' W')
-    except:
-        print('Current power: 0 W')
+        _ = os.system("clear")
 
-    if motor.currentDirection == 0:
-        dirMessage = 'Motor direction: Forwards'
-    else:
-        dirMessage = 'Motor direction: Backwards'
-    print(dirMessage)
-    print('Current motor angle: ' + str(motor.currentAngle) + '°')
+Angle = typing.NewType("Angle", int)
+Step = typing.NewType("Step", int)
+NoiseDB = typing.NewType("NoiseDB", float)
 
-def plotData(fileName, xVals, yVals, xlabel, ylabel):
-    plt.figure(fileName)
-    plt.plot(xVals, yVals)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.savefig(fileName + '.png')
+@dataclasses.dataclass
+class Motor:
+    full_step: Step
+    port: str = None
+    motor: ximc.Axis
+    current_step: Step = None
+    current_angle: Angle = None
+    current_noise: NoiseDB = None
+    noise_map: "list[dict[NoiseDB:Step]]" = None
 
-def writeToCSV(data):
-    pass
+@dataclasses.dataclass
+class PowerMeter:
+    port: str
+    current_power: str = None
 
-def main():
-    motor, powerMeter = initDevices()
-    filePath = 'data/'
-    if not os.path.exists:
-        os.mkdir(filePath)
-        
+menu_dict = {
+    "0": "Set zero point",
+    "1": "Rotate motor by angle",
+    "2": "Rotate motor by step",
+    "3": "Calibrate noise map",
+    "Q": "Quit"
+}
+
+def connect_motor(port: str) -> Motor:
+    motor = Motor(
+        full_step = 28800,
+        port = port,
+        motor = ximc.Axis('xi-com:' + port),
+    )
+    return motor
+
+def angle_to_step(angle: Angle, full_step: Step) -> Step:
+    step = int(angle / 360 * full_step)
+    return step
+
+def step_to_angle(step: Step, full_step: Step) -> Angle:
+    angle = int(step / full_step * 360)
+    return angle
+
+def get_motor_status(motor: Motor) -> None:
+    motor.motor.open_device()
+    motor.current_step = motor.motor.get_status().CurPosition
+    motor.current_angle = step_to_angle(step=motor.current_step, full_step=motor.full_step)
+    motor.motor.close_device()
+
+def print_motor_status(motor: Motor) -> None:
+    get_motor_status(motor=motor)
+    print("Device ready")
+    print("Port:", motor.port)
+    print("Current angle:", motor.current_angle)
+    print("Current step:", motor.current_step)
+    print("Estimated noise level:", motor.current_noise)
+
+def step_motor(motor: Motor, step: Step) -> None:
+    moving = ''
+    motor.motor.open_device()
+    motor.motor.command_movr(step, 0)
+    time.sleep(0.5)
+    while moving != 'MoveState.0':
+        moving = str(motor.motor.get_status().MoveSts)
+    motor.motor.close_device()
+    print("Motor operation complete")
+
+def main() -> None:
     while True:
         clear()
-        printStatus(motor=motor, powerMeter=powerMeter)
-        print(menu)
+        try:
+            motor = connect_motor('/dev/ttyACM0')
+            motor.motor.open_device()
+            motor.motor.get_status()
+            motor.motor.close_device()
+        except:
+            motor = connect_motor('/dev/ttyACM1')
+            
+        print_motor_status(motor=motor)
+        print("Select option:")
+        for key, value in menu_dict.items():
+            print(key + ")", value)
+        user_input = input()
 
-        userInput = input('<Mode>,<Angle>: ')
-        if userInput == 'q' or userInput == 'Q':
+        if user_input.lower() == 'q':
             break
 
-        mode, angle = parseInput(input=userInput)
+        option = int(user_input)
+        while option == 1 or option == 2:
+            clear()
+            print_motor_status(motor=motor)
+            user_input = input("Selected option: " + menu_dict.get(str(option)) + "\nEnter number or q to return to previous menu: ")
+            if user_input.lower() == 'q':
+                option = 0
+                break
+            try:
+                step = int(user_input)
+            except:
+                print("Invalid input")
+            else:
+                if option == 1:
+                    step = angle_to_step(angle=step, full_step=motor.full_step)
+                step_motor(motor=motor, step=step)
 
-        match int(mode):
-            case 0: # reset angle
-                motor.currentAngle = 0
-
-            case 1: # toggle motor direction
-                motor.toggleMotorDirection()
-
-            case num if 1 < num < 7: # step motor at varying speeds
-                motor.stepMotor(mode=mode, angle=angle)
-
-            case 7:
-                if os.path.isfile('calibration.json'):
-                    targetLoss = angle
-                    # load calibration file
-                    with open('calibration.json', 'r') as file:
-                        data = json.load(file)
-
-                    # find closest loss value
-                    closestLoss = min(data, key=lambda x: abs(data[x] - targetLoss))
-                    
-                    targetAngle = data[closestLoss]
-
-                    deltaAngle = targetAngle - motor.currentAngle
-                    if deltaAngle < 0:
-                        motor.toggleMotorDirection()
-                        deltaAngle = -1*deltaAngle
-                        motor.stepMotor(6,deltaAngle)
-                        time.sleep(1)
-                        motor.toggleMotorDirection()
-                        
-                else:
-                    print("No calibration file found")
-
-            case 8: # satellite profile, step 5 deg, wait, record power, step,
-                fileName = filePath + str(datetime.datetime.now().timestamp())
-
-                # power, loss, timeStamp = profiles.satelliteProfile(motor, powerMeter)
-
-                # plotData(fileName, timeStamp, loss, 'Timestamp', 'Loss (dB)')
-
-                # data = np.column_stack((power, loss, timeStamp))
-                # DF = pd.DataFrame(data)
-                # DF.to_csv(fileName + '.csv')
-                pass
-                
-            case 9: # calibration profile
-                fileName = filePath + str(datetime.datetime.now().timestamp())
-
-                asyncio.run(motor.asyncStepMotor(mode=6, angle=720))
-                power, loss, timeStamp = asyncio.run(powerMeter.measure(duration=5000))
-
-                date = [datetime.fromtimestamp(ts) for ts in timeStamp]
-                seconds = [(dt - date[0]).total_seconds() for dt in date]
-
-                # find the index where the steep rise begins
-                threshold = 0.01
-                rise_start_index = np.argmax(np.gradient(loss) > threshold)
-
-                # truncate the data up to the identified index
-                truncTime = seconds[:rise_start_index]
-                truncLoss = loss[:rise_start_index]
-
-                maxTime = max(truncTime)
-                minTime = min(truncTime)
-                timeRange = maxTime - minTime
-
-                # normalise between 0 and 359
-                angle = [(value - minTime) / timeRange * 359 for value in truncTime]
-
-                # build dictionary of angles and loss
-                angleRound = [round(num) for num in angle]
-                df = pd.DataFrame({
-                    'loss': truncLoss,
-                    'angle': angleRound
-                })
-                angleDict = df.groupby('angle').mean()['loss'].to_dict()
-                
-                # write dictionary to file
-                with open('calibration.json', 'w') as file:
-                    json.dump(angleDict, file, indent=2)
-                plotData('calibration.png', angleDict.keys(), angleDict.values(), 'Angle (°)', 'Loss (dB)')
-
-            case _:
-                print('Invalid input')
-
-if __name__ == '__main__':
+if '__main__' == __name__:
     main()
