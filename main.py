@@ -20,9 +20,14 @@ Power = typing.NewType("Power", float)
 ref_power = 0
 
 @dataclasses.dataclass
-class NoiseMap:
+class Noise:
+    angle: Angle
+    power: Power
     noise: NoiseDB
-    step: Step
+
+@dataclasses.dataclass
+class NoiseMap:
+    noise_list: "list[Noise]" = dataclasses.field(default_factory=list)
 
 @dataclasses.dataclass
 class Motor:
@@ -46,6 +51,7 @@ menu_dict = {
     "2": "Rotate motor by step",
     "3": "Return to zero",
     "9": "Calibrate noise map",
+    "R": "Refresh",
     "Q": "Quit"
 }
 
@@ -160,27 +166,33 @@ def return_to_zero(motor: Motor) -> None:
     except:
         pass
 
-def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) -> None:
+def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) -> NoiseMap:
     return_to_zero(motor=motor)
-    noise_map = {}
     step = angle_to_step(angle=1, full_step=motor.full_step)
+    noise_map = NoiseMap()
     for i in range(0, 360):
         current_power = powermeter.powermeter.read
-        noise_db = calc_noise_level(ref_power=ref_power, current_power=current_power)
-        noise_map[i] = noise_db
+        noise_map.noise_list.append(Noise(
+            angle=i,
+            power=current_power,
+            noise=calc_noise_level(ref_power=ref_power, current_power=current_power)
+        ))
         step_motor(motor=motor, step=step)
     
+    noise_map_dict = dataclasses.asdict(noise_map)
     with open("calibration.json", "w") as file:
-        json.dump(noise_map, file, indent=4)
+        json.dump(noise_map_dict, file, indent=4)
+
+    return noise_map
 
 def set_ref_power(powermeter: PowerMeter) -> Power:
     ref_power = Power(powermeter.powermeter.read)
     return ref_power
 
-def get_noise_map() -> dict:
+def get_noise_map() -> NoiseMap:
     with open("calibration.json", "r") as file:
-        noise_map = dict(json.load(file))
-        return noise_map
+        data = json.load(file)
+        return NoiseMap(**data)
 
 def calc_noise_level(ref_power: Power, current_power: Power) -> NoiseDB:
     noise = NoiseDB(10 * math.log10(current_power/ref_power))
@@ -201,39 +213,42 @@ def main() -> None:
         user_input = input()
         if user_input.lower() == 'q':
             break
-        try:
-            option = int(user_input)
-        except:
-            print("Invalid input")
-    
-        if option == 0:
-            set_zero_point(motor=motor)
-            option = -1
-
-        while option == 1 or option == 2:
-            clear()
-            print_motor_status(motor=motor)
-            user_input = input("Selected option: " + menu_dict.get(str(option)) + "\nEnter number or q to return to previous menu: ")
-            if user_input.lower() == 'q':
-                option = -1
-                break
+        if user_input.lower() == 'r':
+            pass
+        else:
             try:
-                step = int(user_input)
+                option = int(user_input)
             except:
                 print("Invalid input")
-            else:
-                if option == 1:
-                    step = angle_to_step(angle=step, full_step=motor.full_step)
-                step_motor(motor=motor, step=step)
+        
+            if option == 0:
+                set_zero_point(motor=motor)
+                option = -1
 
-        if option == 3:
-            return_to_zero(motor=motor)
+            while option == 1 or option == 2:
+                clear()
+                print_motor_status(motor=motor)
+                user_input = input("Selected option: " + menu_dict.get(str(option)) + "\nEnter number or q to return to previous menu: ")
+                if user_input.lower() == 'q':
+                    option = -1
+                    break
+                try:
+                    step = int(user_input)
+                except:
+                    print("Invalid input")
+                else:
+                    if option == 1:
+                        step = angle_to_step(angle=step, full_step=motor.full_step)
+                    step_motor(motor=motor, step=step)
 
-        if option == 8:
-            set_ref_power(powermeter=powermeter)
+            if option == 3:
+                return_to_zero(motor=motor)
 
-        if option == 9:
-            calibrate_noise_map(motor=motor, powermeter=powermeter)
+            if option == 8:
+                set_ref_power(powermeter=powermeter)
+
+            if option == 9:
+                calibrate_noise_map(motor=motor, powermeter=powermeter)
 
 if '__main__' == __name__:
     main()
