@@ -109,7 +109,10 @@ def step_to_angle(step: Step, full_step: Step) -> Angle:
 def get_motor_status(motor: Motor) -> None:
     try:
         motor.motor.open_device()
-        motor.current_step = motor.motor.get_status().CurPosition
+        position = motor.motor.get_status().CurPosition
+        if position < 0:
+            position = motor.full_step + position
+        motor.current_step = position
         motor.current_angle = step_to_angle(step=motor.current_step, full_step=motor.full_step)
         motor.motor.close_device()
     except:
