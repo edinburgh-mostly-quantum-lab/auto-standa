@@ -17,8 +17,6 @@ Step = typing.NewType("Step", int)
 NoiseDB = typing.NewType("NoiseDB", float)
 Power = typing.NewType("Power", float)
 
-ref_power = 0
-
 @dataclasses.dataclass
 class Noise:
     angle: Angle
