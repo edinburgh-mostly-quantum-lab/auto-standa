@@ -99,11 +99,11 @@ def connect_power_meter() -> PowerMeter:
     return powermeter
 
 def angle_to_step(angle: Angle, full_step: Step) -> Step:
-    step = Step((angle / 360 * full_step))
+    step = Step(int((angle / 360 * full_step)))
     return step
 
 def step_to_angle(step: Step, full_step: Step) -> Angle:
-    angle = Angle((step / full_step * 360))
+    angle = Angle(int((step / full_step * 360)))
     return angle
 
 def get_motor_status(motor: Motor) -> None:
@@ -162,15 +162,16 @@ def step_motor(motor: Motor, step: Step) -> None:
     except:
         pass
 
-def return_to_zero(motor: Motor) -> None:
+def rotate_to_angle(motor: Motor, target_angle: Angle = 0):
     try:
-        step_delta = -motor.current_step
+        target_step = angle_to_step(angle=target_angle, full_step=motor.full_step)
+        step_delta = target_step - motor.current_step
         step_motor(motor=motor, step=step_delta)
     except:
         pass
 
 def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) -> NoiseMap:
-    return_to_zero(motor=motor)
+    rotate_to_angle(motor=motor)
     step = angle_to_step(angle=1, full_step=motor.full_step)
     noise_map = NoiseMap()
     for i in range(0, 360):
@@ -228,7 +229,7 @@ def main() -> None:
                 set_zero_point(motor=motor)
                 option = -1
 
-            while option == 1 or option == 2:
+            while option >= 1 and option <= 3:
                 clear()
                 print_motor_status(motor=motor)
                 user_input = input("Selected option: " + menu_dict.get(str(option)) + "\nEnter number or q to return to previous menu: ")
@@ -242,10 +243,12 @@ def main() -> None:
                 else:
                     if option == 1:
                         step = angle_to_step(angle=step, full_step=motor.full_step)
+                    if option == 3:
+                        rotate_to_angle(motor=motor, target_angle=step)
                     step_motor(motor=motor, step=step)
 
             if option == 5:
-                return_to_zero(motor=motor)
+                rotate_to_angle(motor=motor)
 
             if option == 8:
                 ref_power = set_ref_power(powermeter=powermeter)
