@@ -160,12 +160,14 @@ def return_to_zero(motor: Motor) -> None:
     except:
         pass
 
-def calibrate_noise(motor: Motor, powermeter: PowerMeter):
+def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) -> None:
     return_to_zero(motor=motor)
     noise_map = {}
     step = angle_to_step(angle=1, full_step=motor.full_step)
     for i in range(0, 360):
-        noise_map[i] = powermeter.powermeter.read
+        current_power = powermeter.powermeter.read
+        noise_db = calc_noise_level(ref_power=ref_power, current_power=current_power)
+        noise_map[i] = noise_db
         step_motor(motor=motor, step=step)
     
     with open("calibration.json", "w") as file:
@@ -175,12 +177,12 @@ def set_ref_power(powermeter: PowerMeter) -> Power:
     ref_power = Power(powermeter.powermeter.read)
     return ref_power
 
-def get_noise_map():
+def get_noise_map() -> dict:
     with open("calibration.json", "r") as file:
         noise_map = dict(json.load(file))
         return noise_map
 
-def calc_noise_level(ref_power: float, current_power: float) -> NoiseDB:
+def calc_noise_level(ref_power: Power, current_power: Power) -> NoiseDB:
     noise = NoiseDB(10 * math.log10(current_power/ref_power))
     return noise
 
@@ -231,7 +233,7 @@ def main() -> None:
             set_ref_power(powermeter=powermeter)
 
         if option == 9:
-            calibrate_noise(motor=motor, powermeter=powermeter)
+            calibrate_noise_map(motor=motor, powermeter=powermeter)
 
 if '__main__' == __name__:
     main()
