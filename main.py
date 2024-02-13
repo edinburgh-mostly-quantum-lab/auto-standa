@@ -7,10 +7,11 @@ import libximc.highlevel as ximc
 from ThorlabsPM100 import ThorlabsPM100, USBTMC
 
 def clear() -> None:
-    if os.name == 'nt':
-        _ = os.system("cls")
-    else:
-        _ = os.system("clear")
+    # if os.name == 'nt':
+    #     _ = os.system("cls")
+    # else:
+    #     _ = os.system("clear")
+    pass
 
 Angle = typing.NewType("Angle", int)
 Step = typing.NewType("Step", int)
@@ -43,7 +44,8 @@ class Motor:
 class PowerMeter:
     port: str
     powermeter: ThorlabsPM100
-    current_power: str = None
+    current_power: Power = None
+    ref_power: Power = None
 
 menu_dict = {
     "0": "Set zero point",
@@ -99,11 +101,11 @@ def connect_power_meter() -> PowerMeter:
     return powermeter
 
 def angle_to_step(angle: Angle, full_step: Step) -> Step:
-    step = Step(int((angle / 360 * full_step)))
+    step = Step(angle / 360 * full_step)
     return step
 
 def step_to_angle(step: Step, full_step: Step) -> Angle:
-    angle = Angle(int((step / full_step * 360)))
+    angle = Angle(step / full_step * 360)
     return angle
 
 def get_motor_status(motor: Motor) -> None:
@@ -112,6 +114,8 @@ def get_motor_status(motor: Motor) -> None:
         position = motor.motor.get_status().CurPosition
         if position < 0:
             position = motor.full_step + position
+        if position > motor.full_step:
+            position = position - motor.full_step
         motor.current_step = position
         motor.current_angle = step_to_angle(step=motor.current_step, full_step=motor.full_step)
         motor.motor.close_device()
@@ -151,6 +155,7 @@ def print_power_meter_status(powermeter: PowerMeter) -> None:
             print("Power meter connected at port:", powermeter.port)
         else:
             print("Power meter not found")
+        print("Reference power:", powermeter.ref_power, "W")
         powermeter.current_power = powermeter.powermeter.read
         print("Power:", powermeter.current_power, "W")
     except:
@@ -169,9 +174,14 @@ def rotate_to_angle(motor: Motor, target_angle: Angle = 0):
     try:
         target_step = angle_to_step(angle=target_angle, full_step=motor.full_step)
         step_delta = target_step - motor.current_step
+        step_delta = (step_delta + motor.full_step/2) % motor.full_step - motor.full_step/2
         step_motor(motor=motor, step=step_delta)
     except:
         pass
+
+def calc_noise_level(ref_power: Power, current_power: Power) -> NoiseDB:
+    noise = NoiseDB(10 * math.log10(current_power/ref_power))
+    return noise
 
 def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) -> NoiseMap:
     rotate_to_angle(motor=motor)
@@ -192,18 +202,13 @@ def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) 
 
     return noise_map
 
-def set_ref_power(powermeter: PowerMeter) -> Power:
-    ref_power = Power(powermeter.powermeter.read)
-    return ref_power
+def set_ref_power(powermeter: PowerMeter):
+    powermeter.ref_power = Power(powermeter.powermeter.read)
 
 def get_noise_map() -> NoiseMap:
     with open("calibration.json", "r") as file:
         data = json.load(file)
         return NoiseMap(**data)
-
-def calc_noise_level(ref_power: Power, current_power: Power) -> NoiseDB:
-    noise = NoiseDB(10 * math.log10(current_power/ref_power))
-    return noise
 
 def main() -> None:
     while True:
@@ -254,10 +259,10 @@ def main() -> None:
                 rotate_to_angle(motor=motor)
 
             if option == 8:
-                ref_power = set_ref_power(powermeter=powermeter)
+                set_ref_power(powermeter=powermeter)
 
             if option == 9:
-                calibrate_noise_map(ref_power=ref_power, motor=motor, powermeter=powermeter)
+                calibrate_noise_map(ref_power=powermeter.ref_power, motor=motor, powermeter=powermeter)
 
 if '__main__' == __name__:
     main()
