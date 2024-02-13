@@ -49,7 +49,10 @@ menu_dict = {
     "0": "Set zero point",
     "1": "Rotate motor by angle",
     "2": "Rotate motor by step",
-    "3": "Return to zero",
+    "3": "Rotate to angle",
+    "4": "Rotate to noise level",
+    "5": "Return to zero",
+    "8": "Measure reference power",
     "9": "Calibrate noise map",
     "R": "Refresh",
     "Q": "Quit"
@@ -241,14 +244,14 @@ def main() -> None:
                         step = angle_to_step(angle=step, full_step=motor.full_step)
                     step_motor(motor=motor, step=step)
 
-            if option == 3:
+            if option == 5:
                 return_to_zero(motor=motor)
 
             if option == 8:
-                set_ref_power(powermeter=powermeter)
+                ref_power = set_ref_power(powermeter=powermeter)
 
             if option == 9:
-                calibrate_noise_map(motor=motor, powermeter=powermeter)
+                calibrate_noise_map(ref_power=ref_power, motor=motor, powermeter=powermeter)
 
 if '__main__' == __name__:
     main()
