@@ -7,10 +7,11 @@ import libximc.highlevel as ximc
 from ThorlabsPM100 import ThorlabsPM100, USBTMC
 
 def clear() -> None:
-    if os.name == 'nt':
-        _ = os.system("cls")
-    else:
-        _ = os.system("clear")
+    # if os.name == 'nt':
+    #     _ = os.system("cls")
+    # else:
+    #     _ = os.system("clear")
+    pass
 
 Angle = typing.NewType("Angle", int)
 Step = typing.NewType("Step", int)
