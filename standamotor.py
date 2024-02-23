@@ -3,6 +3,7 @@ import dataclasses
 import typing
 import math
 import json
+import difflib
 
 from powermeter import *
 
@@ -124,18 +125,10 @@ def rotate_to_angle(motor: Motor, target_angle: Angle = 0):
         pass
 
 def rotate_to_noise(motor: Motor, target_noise: Noise):
-    min_diff = float('inf')
-    key = 'noise'
-
-    for i, d in enumerate(motor.noise_map):
-        if key in d:
-            diff = abs(d[key] - target_noise)
-            if diff < min_diff:
-                min_diff = diff
-                index = i
-
-    target_angle = motor.noise_map[index][key]
-    rotate_to_angle(motor=motor, target_angle=target_angle)
+    index = min(range(len(motor.noise_map)), key=lambda i: abs(motor.noise_map[i]['noise'] - target_noise))
+    print(index)
+    # target_angle = motor.noise_map[index][key]
+    # rotate_to_angle(motor=motor, target_angle=target_angle)
 
 def calc_noise_level(ref_power: Power, current_power: Power) -> NoiseDB:
     try:
