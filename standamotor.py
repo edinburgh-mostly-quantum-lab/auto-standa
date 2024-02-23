@@ -10,16 +10,13 @@ Angle = typing.NewType("Angle", int)
 Step = typing.NewType("Step", int)
 NoiseDB = typing.NewType("NoiseDB", float)
 Power = typing.NewType("Power", float)
+NoiseMap = typing.NewType("NoiseMap", list)
 
 @dataclasses.dataclass
 class Noise:
     angle: Angle
     power: Power
     noise: NoiseDB
-
-@dataclasses.dataclass
-class NoiseMap:
-    noise_list: "list[Noise]" = dataclasses.field(default_factory=list)
 
 @dataclasses.dataclass
 class Motor:
@@ -126,8 +123,25 @@ def rotate_to_angle(motor: Motor, target_angle: Angle = 0):
     except:
         pass
 
+def rotate_to_noise(motor: Motor, target_noise: Noise):
+    min_diff = float('inf')
+    key = 'noise'
+
+    for i, d in enumerate(motor.noise_map):
+        if key in d:
+            diff = abs(d[key] - target_noise)
+            if diff < min_diff:
+                min_diff = diff
+                index = i
+
+    target_angle = motor.noise_map[index][key]
+    rotate_to_angle(motor=motor, target_angle=target_angle)
+
 def calc_noise_level(ref_power: Power, current_power: Power) -> NoiseDB:
-    noise = NoiseDB(-10 * math.log10(current_power/ref_power))
+    try:
+        noise = NoiseDB(-10 * math.log10(current_power/ref_power))
+    except:
+        noise = None
     return noise
 
 def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) -> NoiseMap:
@@ -136,20 +150,18 @@ def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) 
     noise_map = NoiseMap()
     for i in range(0, 360):
         current_power = powermeter.powermeter.read
-        noise_map.noise_list.append(Noise(
+        noise_map.append(Noise(
             angle=i,
             power=current_power,
             noise=calc_noise_level(ref_power=ref_power, current_power=current_power)
         ))
         step_motor(motor=motor, step=step)
     
-    # noise_map_dict = dataclasses.asdict(noise_map)
     with open("calibration.json", "w") as file:
-        # json.dump(noise_map, file, indent=4)
-        json.dump(noise_map, file, cls=dataclassJSONEncoder, indent=4)
+        json.dump(noise_map, file, indent=4)
     return noise_map
 
 def get_noise_map() -> NoiseMap:
     with open("calibration.json", "r") as file:
-        data = json.load(file)
-        return NoiseMap(**data)
+        data = NoiseMap(json.load(file))
+        return data

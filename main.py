@@ -49,7 +49,7 @@ def main() -> None:
                 set_zero_point(motor=motor)
                 option = -1
 
-            while option >= 1 and option <= 3:
+            while option >= 1 and option <= 4:
                 clear()
                 print_motor_status(motor=motor)
                 user_input = input("Selected option: " + menu_dict.get(str(option)) + "\nEnter number or q to return to previous menu: ")
@@ -65,7 +65,9 @@ def main() -> None:
                         step = angle_to_step(angle=step, full_step=motor.full_step)
                     if option == 3:
                         rotate_to_angle(motor=motor, target_angle=step)
-                    step_motor(motor=motor, step=step)
+                    if option == 4:
+                        rotate_to_noise(motor=motor, target_noise=step)
+                    # step_motor(motor=motor, step=step)
 
             if option == 5:
                 rotate_to_angle(motor=motor)
