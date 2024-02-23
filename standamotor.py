@@ -125,7 +125,7 @@ def rotate_to_angle(motor: Motor, target_angle: Angle = 0):
         pass
 
 def rotate_to_noise(motor: Motor, target_noise: Noise):
-    index = min(range(len(motor.noise_map)), key=lambda i: abs(motor.noise_map[i]['noise'] - target_noise))
+    index = min(range(len(motor.noise_map)), key=lambda i: abs(motor.noise_map[i]["noise"] - target_noise))
     print(index)
     # target_angle = motor.noise_map[index][key]
     # rotate_to_angle(motor=motor, target_angle=target_angle)
@@ -151,7 +151,7 @@ def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) 
         step_motor(motor=motor, step=step)
     
     with open("calibration.json", "w") as file:
-        json.dump(noise_map, file, indent=4)
+        json.dump(noise_map, file, cls=dataclassJSONEncoder, indent=4)
     return noise_map
 
 def get_noise_map() -> NoiseMap:
