@@ -1,51 +1,157 @@
-import time
 import libximc.highlevel as ximc
+import dataclasses
+import typing
+import math
+import json
 
-class Motor():
-    def __init__(self, port=None) -> None:
-        self.motor = None
-        self.port = port
-        self.fullStep = 28800
-        self.fullStepTime = None
-        self.currentAngle = None
-        self.currentDirection = 0
+from powermeter import *
 
-    def initMotor(self):
+Angle = typing.NewType("Angle", int)
+Step = typing.NewType("Step", int)
+NoiseDB = typing.NewType("NoiseDB", float)
+Power = typing.NewType("Power", float)
+NoiseMap = typing.NewType("NoiseMap", list)
+
+@dataclasses.dataclass
+class Noise:
+    angle: Angle
+    power: Power
+    noise: NoiseDB
+
+@dataclasses.dataclass
+class Motor:
+    full_step: Step
+    port: str = None
+    motor: ximc.Axis = None
+    current_step: Step = None
+    current_angle: Angle = None
+    current_noise: NoiseDB = None
+    noise_map: NoiseMap = None
+
+class dataclassJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        return super().default(o)
+
+def connect_motor() -> Motor:
+    for port_num in range(0,11):
+        port = '/dev/ttyACM' + str(port_num)
+        motor = Motor(
+            full_step = 28800,
+            port = port,
+            motor = ximc.Axis('xi-com:' + port),
+        )
         try:
-            device_uri = 'xi-com:' + self.port
-            self.motor = ximc.Axis(device_uri)
+            motor.motor.open_device()
+            motor.motor.get_status()
+            motor.motor.close_device()
         except:
-            pass
+            motor = Motor(
+            full_step = 28800,
+            port = None,
+            motor = None,
+        )
+        else:
+            break
+    return motor
 
-    def degToStep(self, deg):
-        step = (deg * self.fullStep) / 360
-        return step
+def angle_to_step(angle: Angle, full_step: Step) -> Step:
+    step = Step(angle / 360 * full_step)
+    return step
+
+def step_to_angle(step: Step, full_step: Step) -> Angle:
+    angle = Angle(step / full_step * 360)
+    return angle
+
+def get_motor_status(motor: Motor) -> None:
+    try:
+        motor.motor.open_device()
+        position = motor.motor.get_status().CurPosition
+        if position < 0:
+            position = motor.full_step + position
+        if position > motor.full_step:
+            position = position - motor.full_step
+        motor.current_step = position
+        motor.current_angle = step_to_angle(step=motor.current_step, full_step=motor.full_step)
+        motor.motor.close_device()
+    except:
+        pass
+
+def set_zero_point(motor: Motor) -> None:
+    try:
+        motor.motor.open_device()
+        motor.motor.command_zero()
+        motor.motor.close_device()
+        get_motor_status(motor=motor)
+    except:
+        pass
+
+def print_motor_status(motor: Motor) -> None:
+    get_motor_status(motor=motor)
+    if motor.current_step == motor.full_step:
+            set_zero_point(motor=motor)
+    if motor.port:
+        print("Standa motor connected at port:", motor.port)
+    else:
+        print("Standa motor not found")
+    print("Current angle:", motor.current_angle)
+    print("Current step:", motor.current_step, "/", motor.full_step)
+    try:
+        motor.noise_map = get_noise_map()
+    except:
+        print("No calibration file found")
+    else:
+        print("Calibration file found")
+    print("Estimated noise level:", motor.current_noise)
+
+def step_motor(motor: Motor, step: Step) -> None:
+    try:
+        motor.motor.open_device()
+        motor.motor.command_movr(int(step), 0)
+        motor.motor.command_wait_for_stop(refresh_interval_ms=10)
+        motor.motor.close_device()
+    except:
+        pass
+
+def rotate_to_angle(motor: Motor, target_angle: Angle = 0):
+    try:
+        target_step = angle_to_step(angle=target_angle, full_step=motor.full_step)
+        step_delta = target_step - motor.current_step
+        step_delta = (step_delta + motor.full_step/2) % motor.full_step - motor.full_step/2
+        step_motor(motor=motor, step=step_delta)
+    except:
+        pass
+
+def rotate_to_noise(motor: Motor, target_noise: Noise):
+    target_angle = min(range(len(motor.noise_map)), key=lambda i: abs(motor.noise_map[i]["noise"] - target_noise))
+    rotate_to_angle(motor=motor, target_angle=target_angle)
+
+def calc_noise_level(ref_power: Power, current_power: Power) -> NoiseDB:
+    try:
+        noise = NoiseDB(-10 * math.log10(current_power/ref_power))
+    except:
+        noise = None
+    return noise
+
+def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) -> NoiseMap:
+    rotate_to_angle(motor=motor)
+    step = angle_to_step(angle=1, full_step=motor.full_step)
+    noise_map = NoiseMap()
+    for i in range(0, 360):
+        current_power = powermeter.powermeter.read
+        noise_map.append(Noise(
+            angle=i,
+            power=current_power,
+            noise=calc_noise_level(ref_power=ref_power, current_power=current_power)
+        ))
+        step_motor(motor=motor, step=step)
     
-    def toggleMotorDirection(self):
-        self.currentDirection = 1 - self.currentDirection
-        return self.currentDirection
+    with open("calibration.json", "w") as file:
+        json.dump(noise_map, file, cls=dataclassJSONEncoder, indent=4)
+    return noise_map
 
-    def stepMotor(self, deg):
-        if self.currentDirection == 1:
-            deg = -1*deg
-        step = self.degToStep(deg=deg)
-        self.motor.open_device()
-        self.motor.command_movr(step, 0)
-        self.calcTime(step=step)
-        self.motor.close_device()
-
-    def stepToAngle(self, deg):
-        if self.currentDirection == 1:
-            deg = -1*deg
-        step = self.degToStep(deg=deg)
-        self.motor.open_device()
-        self.motor.command_move(step, 0)
-        self.motor.command_move()
-
-    def calcTime(self, step):
-        stepTime = (step * self.fullStepTime) / self.fullStep
-        return stepTime
-
-    def getAngle(self):
-        self.currentAngle = self.motor.get_position()
-        return self.currentAngle
+def get_noise_map() -> NoiseMap:
+    with open("calibration.json", "r") as file:
+        data = NoiseMap(json.load(file))
+        return data

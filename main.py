@@ -1,193 +1,82 @@
-# from arduinomotor import Motor
-from standamotor import Motor
-import powermeter
-import profiles
-
 import os
-import asyncio
-import time
-import datetime
-import json
-import csv
-import pandas as pd
-import matplotlib.pyplot as plt
-import numpy as np
 
-menu = '''Select option:
-0. Reset current angle to zero
-1. Toggle motor direction
-2. Step motor: Full step
-3. Step motor: Half step
-4. Step motor: Quarter step
-5. Step motor: Eighth step
-6. Step motor: Sixteenth step
-7. Rotate to loss level
-8. Motor profile: Satellite Sweep
-9. Calibrate
-Q. Quit'''
+from standamotor import *
+from powermeter import *
 
-def clear():
-    if os.name == 'posix':  # macOS and Linux
-        _ = os.system('clear')
-    
-    elif os.name == 'nt': # Windows
-        _ = os.system('cls')
-
-def initDevices():
-    try:
-        motor = Motor(port='/dev/ttyACM0')
-    except:
-        motor = Motor(port='/dev/ttyACM1')
-    motor.initMotor()
-
-    powerMeter = powermeter.PowerMeter(port='/dev/usbtmc0')
-    powerMeter.initPowerMeter()
-
-    return motor, powerMeter
-
-def parseInput(input): # seperate input into mode, fullAngle, stepAngle
-    inputList = input.strip().split(',')
-    mode = inputList[0]
-    try:
-        fullAngle = inputList[1]
-    except:
-        fullAngle = 0
-    return mode, fullAngle
-
-def printStatus(motor, powerMeter):
-    if motor.port:
-        motorStatus = 'Motor found at ' + motor.port
+def clear() -> None:
+    if os.name == 'nt':
+        _ = os.system("cls")
     else:
-        motorStatus = 'No motor found'
-    print(motorStatus)
-    if powerMeter.port:
-        powerMeterStatus = 'Power meter found at ' + powerMeter.port
-    else:
-        powerMeterStatus = 'No power meter found'
-    print(powerMeterStatus)
-    try:
-        print('Current power: ' + str(powerMeter.read()) + ' W')
-    except:
-        print('Current power: 0 W')
+        _ = os.system("clear")
 
-    if motor.currentDirection == 0:
-        dirMessage = 'Motor direction: Forwards'
-    else:
-        dirMessage = 'Motor direction: Backwards'
-    print(dirMessage)
-    print('Current motor angle: ' + str(motor.currentAngle) + '°')
+menu_dict = {
+    "0": "Set zero point",
+    "1": "Rotate motor by angle",
+    "2": "Rotate motor by step",
+    "3": "Rotate to angle",
+    "4": "Rotate to noise level",
+    "5": "Return to zero",
+    "8": "Measure reference power",
+    "9": "Calibrate noise map",
+    "R": "Refresh",
+    "Q": "Quit"
+}
 
-def plotData(fileName, xVals, yVals, xlabel, ylabel):
-    plt.figure(fileName)
-    plt.plot(xVals, yVals)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.savefig(fileName + '.png')
-
-def writeToCSV(data):
-    pass
-
-def main():
-    motor, powerMeter = initDevices()
-    filePath = 'data/'
-    if not os.path.exists:
-        os.mkdir(filePath)
-        
+def main() -> None:
+    motor = connect_motor()
+    powermeter = connect_power_meter()
     while True:
         clear()
-        printStatus(motor=motor, powerMeter=powerMeter)
-        print(menu)
+        print_motor_status(motor=motor)
+        print_power_meter_status(powermeter=powermeter)
 
-        userInput = input('<Mode>,<Angle>: ')
-        if userInput == 'q' or userInput == 'Q':
+        print("Select option:")
+        for key, value in menu_dict.items():
+            print(key + ")", value)
+        user_input = input()
+        if user_input.lower() == 'q':
             break
+        if user_input.lower() == 'r':
+            motor = connect_motor()
+            powermeter = connect_power_meter()
+        else:
+            try:
+                option = int(user_input)
+            except:
+                print("Invalid input")
+        
+            if option == 0:
+                set_zero_point(motor=motor)
+                option = -1
 
-        mode, angle = parseInput(input=userInput)
-
-        match int(mode):
-            case 0: # reset angle
-                motor.currentAngle = 0
-
-            case 1: # toggle motor direction
-                motor.toggleMotorDirection()
-
-            case num if 1 < num < 7: # step motor at varying speeds
-                motor.stepMotor(mode=mode, angle=angle)
-
-            case 7:
-                if os.path.isfile('calibration.json'):
-                    targetLoss = angle
-                    # load calibration file
-                    with open('calibration.json', 'r') as file:
-                        data = json.load(file)
-
-                    # find closest loss value
-                    closestLoss = min(data, key=lambda x: abs(data[x] - targetLoss))
-                    
-                    targetAngle = data[closestLoss]
-
-                    deltaAngle = targetAngle - motor.currentAngle
-                    if deltaAngle < 0:
-                        motor.toggleMotorDirection()
-                        deltaAngle = -1*deltaAngle
-                        motor.stepMotor(6,deltaAngle)
-                        time.sleep(1)
-                        motor.toggleMotorDirection()
-                        
+            while option >= 1 and option <= 4:
+                clear()
+                print_motor_status(motor=motor)
+                user_input = input("Selected option: " + menu_dict.get(str(option)) + "\nEnter number or q to return to previous menu: ")
+                if user_input.lower() == 'q':
+                    option = -1
+                    break
+                try:
+                    step = int(user_input)
+                except:
+                    print("Invalid input")
                 else:
-                    print("No calibration file found")
+                    if option == 1:
+                        step = angle_to_step(angle=step, full_step=motor.full_step)
+                    if option == 3:
+                        rotate_to_angle(motor=motor, target_angle=step)
+                    if option == 4:
+                        rotate_to_noise(motor=motor, target_noise=step)
+                    # step_motor(motor=motor, step=step)
 
-            case 8: # satellite profile, step 5 deg, wait, record power, step,
-                fileName = filePath + str(datetime.datetime.now().timestamp())
+            if option == 5:
+                rotate_to_angle(motor=motor)
 
-                # power, loss, timeStamp = profiles.satelliteProfile(motor, powerMeter)
+            if option == 8:
+                set_ref_power(powermeter=powermeter)
 
-                # plotData(fileName, timeStamp, loss, 'Timestamp', 'Loss (dB)')
+            if option == 9:
+                calibrate_noise_map(ref_power=powermeter.ref_power, motor=motor, powermeter=powermeter)
 
-                # data = np.column_stack((power, loss, timeStamp))
-                # DF = pd.DataFrame(data)
-                # DF.to_csv(fileName + '.csv')
-                pass
-                
-            case 9: # calibration profile
-                fileName = filePath + str(datetime.datetime.now().timestamp())
-
-                asyncio.run(motor.asyncStepMotor(mode=6, angle=720))
-                power, loss, timeStamp = asyncio.run(powerMeter.measure(duration=5000))
-
-                date = [datetime.fromtimestamp(ts) for ts in timeStamp]
-                seconds = [(dt - date[0]).total_seconds() for dt in date]
-
-                # find the index where the steep rise begins
-                threshold = 0.01
-                rise_start_index = np.argmax(np.gradient(loss) > threshold)
-
-                # truncate the data up to the identified index
-                truncTime = seconds[:rise_start_index]
-                truncLoss = loss[:rise_start_index]
-
-                maxTime = max(truncTime)
-                minTime = min(truncTime)
-                timeRange = maxTime - minTime
-
-                # normalise between 0 and 359
-                angle = [(value - minTime) / timeRange * 359 for value in truncTime]
-
-                # build dictionary of angles and loss
-                angleRound = [round(num) for num in angle]
-                df = pd.DataFrame({
-                    'loss': truncLoss,
-                    'angle': angleRound
-                })
-                angleDict = df.groupby('angle').mean()['loss'].to_dict()
-                
-                # write dictionary to file
-                with open('calibration.json', 'w') as file:
-                    json.dump(angleDict, file, indent=2)
-                plotData('calibration.png', angleDict.keys(), angleDict.values(), 'Angle (°)', 'Loss (dB)')
-
-            case _:
-                print('Invalid input')
-
-if __name__ == '__main__':
+if '__main__' == __name__:
     main()

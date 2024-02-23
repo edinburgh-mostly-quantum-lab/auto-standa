@@ -1,48 +1,45 @@
 from ThorlabsPM100 import ThorlabsPM100, USBTMC
-import datetime
-import numpy as np
+import dataclasses
+import typing
 
+Power = typing.NewType("Power", float)
+
+@dataclasses.dataclass
 class PowerMeter:
-    def __init__(self, port=None):
-        self.powermeter = None
-        self.port = port
+    port: str
+    powermeter: ThorlabsPM100
+    current_power: Power = None
+    ref_power: Power = None
 
-    def initPowerMeter(self):
+def connect_power_meter() -> PowerMeter:
+    for port_num in range(0,11):
+        port = '/dev/usbtmc' + str(port_num)
         try:
-            inst = USBTMC(device=self.port)
+            inst = USBTMC(device=port)
+            powermeter = PowerMeter(
+                port = port,
+                powermeter = ThorlabsPM100(inst=inst)
+            )
         except:
-            print("No power meter found")
+            powermeter = PowerMeter(
+                port = None,
+                powermeter = None
+            )
         else:
-            self.powermeter = ThorlabsPM100(inst=inst)
-        return self.powermeter
+            break
+    return powermeter
 
-    def read(self): # single power measurement
-        return self.powermeter.read
-    
-    # repeated async measurements
-    async def loopMeaure(self, duration):
-        for x in range(duration):
-            power = self.powermeter.read
-            timeStamp = datetime.datetime.now().timestamp()
-            yield power, timeStamp
+def print_power_meter_status(powermeter: PowerMeter) -> None:
+    try:
+        if powermeter.port:
+            print("Power meter connected at port:", powermeter.port)
+        else:
+            print("Power meter not found")
+        print("Reference power:", powermeter.ref_power, "W")
+        powermeter.current_power = powermeter.powermeter.read
+        print("Power:", powermeter.current_power, "W")
+    except:
+        pass
 
-    async def measure(self, duration):
-        powerList = []
-        timeStampList = []
-        lossList = []
-        if self.powermeter:
-            refPower = self.powermeter.read
-            async for power, timeStamp in self.loopMeaure(duration=duration):
-                powerList.append(power)
-                loss = -10*np.log10(np.divide(power, refPower))
-                lossList.append(loss)
-                timeStampList.append(timeStamp)  
-        else: # simulated power meter
-            refPower = 20
-            async for x, (power, timeStamp) in range(duration):
-                power = refPower - 0.01*x
-                powerList.append(power)
-                loss = -10*np.log10(np.divide(power, refPower))
-                lossList.append(loss)
-                timeStampList.append(timeStamp)
-        return powerList, lossList, timeStampList
+def set_ref_power(powermeter: PowerMeter):
+    powermeter.ref_power = Power(powermeter.powermeter.read)
