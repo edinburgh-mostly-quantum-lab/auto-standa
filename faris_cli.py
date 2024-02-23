@@ -64,10 +64,10 @@ def main() -> None:
                     if option == 1:
                         step = angle_to_step(angle=step, full_step=motor.full_step)
                     if option == 3:
-                        rotate_to_angle(motor=motor, target_angle=step)
+                        step = rotate_to_angle(motor=motor, target_angle=step)
                     if option == 4:
-                        rotate_to_noise(motor=motor, target_noise=step)
-                    # step_motor(motor=motor, step=step)
+                        step = rotate_to_noise(motor=motor, target_noise=step)
+                    step_motor(motor=motor, step=step)
 
             if option == 5:
                 rotate_to_angle(motor=motor)

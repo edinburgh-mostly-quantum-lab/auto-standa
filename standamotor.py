@@ -114,18 +114,19 @@ def step_motor(motor: Motor, step: Step) -> None:
     except:
         pass
 
-def rotate_to_angle(motor: Motor, target_angle: Angle = 0):
+def rotate_to_angle(motor: Motor, target_angle: Angle = 0) -> Step:
     try:
         target_step = angle_to_step(angle=target_angle, full_step=motor.full_step)
         step_delta = target_step - motor.current_step
         step_delta = (step_delta + motor.full_step/2) % motor.full_step - motor.full_step/2
-        step_motor(motor=motor, step=step_delta)
+        return step_delta
     except:
         pass
 
-def rotate_to_noise(motor: Motor, target_noise: Noise):
+def rotate_to_noise(motor: Motor, target_noise: Noise) -> Step:
     target_angle = min(range(len(motor.noise_map)), key=lambda i: abs(motor.noise_map[i]["noise"] - target_noise))
-    rotate_to_angle(motor=motor, target_angle=target_angle)
+    step = rotate_to_angle(motor=motor, target_angle=target_angle)
+    return step
 
 def calc_noise_level(ref_power: Power, current_power: Power) -> NoiseDB:
     try:
