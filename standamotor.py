@@ -31,6 +31,12 @@ class Motor:
     current_noise: NoiseDB = None
     noise_map: NoiseMap = None
 
+class dataclassJSONEncoder(json.JSONEncoder):
+    def default(self, o):
+        if dataclasses.is_dataclass(o):
+            return dataclasses.asdict(o)
+        return super().default(o)
+
 def connect_motor() -> Motor:
     for port_num in range(0,11):
         port = '/dev/ttyACM' + str(port_num)
@@ -121,7 +127,7 @@ def rotate_to_angle(motor: Motor, target_angle: Angle = 0):
         pass
 
 def calc_noise_level(ref_power: Power, current_power: Power) -> NoiseDB:
-    noise = NoiseDB(10 * math.log10(current_power/ref_power))
+    noise = NoiseDB(-10 * math.log10(current_power/ref_power))
     return noise
 
 def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) -> NoiseMap:
@@ -137,10 +143,10 @@ def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) 
         ))
         step_motor(motor=motor, step=step)
     
-    noise_map_dict = dataclasses.asdict(noise_map)
+    # noise_map_dict = dataclasses.asdict(noise_map)
     with open("calibration.json", "w") as file:
-        json.dump(noise_map_dict, file, indent=4)
-
+        # json.dump(noise_map, file, indent=4)
+        json.dump(noise_map, file, cls=dataclassJSONEncoder, indent=4)
     return noise_map
 
 def get_noise_map() -> NoiseMap:

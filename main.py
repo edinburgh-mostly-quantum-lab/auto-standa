@@ -23,12 +23,11 @@ menu_dict = {
 }
 
 def main() -> None:
+    motor = connect_motor()
+    powermeter = connect_power_meter()
     while True:
         clear()
-        motor = connect_motor()
         print_motor_status(motor=motor)
-
-        powermeter = connect_power_meter()
         print_power_meter_status(powermeter=powermeter)
 
         print("Select option:")
@@ -38,7 +37,8 @@ def main() -> None:
         if user_input.lower() == 'q':
             break
         if user_input.lower() == 'r':
-            pass
+            motor = connect_motor()
+            powermeter = connect_power_meter()
         else:
             try:
                 option = int(user_input)
