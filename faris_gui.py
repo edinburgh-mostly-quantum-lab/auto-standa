@@ -1,6 +1,12 @@
 import tkinter as tk
 from tkinter import ttk  
 import faris_cli
+import subprocess
+
+def run_faris_cli(input):
+    process = subprocess.Popen(['python3', 'faris_cli.py'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stdout, stderr = process.communicate(input=input)
+    return stdout, stderr
 
 window = tk.Tk()
 window.title("Faris' Automated RotatIng Standa (FARIS) Motor")
@@ -8,8 +14,8 @@ window.minsize(400,400)
 frame = tk.Frame(master=window)
 frame.pack(side=tk.LEFT, padx=10,pady=10)
 
-def handle_button_press():
-    window.destroy()
+def button_click():
+    pass
 
 label = ttk.Label(text="Select option", master=frame)
 label.pack(anchor=tk.W)
