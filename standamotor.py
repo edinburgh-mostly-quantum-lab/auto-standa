@@ -3,7 +3,6 @@ import dataclasses
 import typing
 import math
 import json
-import difflib
 
 from powermeter import *
 
