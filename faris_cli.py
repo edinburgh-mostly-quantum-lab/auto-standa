@@ -27,6 +27,7 @@ def main() -> None:
     powermeter = connect_power_meter()
     while True:
         clear()
+        print("Faris' Automated RotatIng Standa (FARIS) Motor")
         print_motor_status(motor=motor)
         print_power_meter_status(powermeter=powermeter)
 
