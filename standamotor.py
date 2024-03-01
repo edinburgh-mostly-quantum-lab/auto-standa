@@ -3,6 +3,7 @@ import dataclasses
 import typing
 import math
 import json
+import os
 
 from powermeter import *
 
@@ -10,7 +11,6 @@ Angle = typing.NewType("Angle", int)
 Step = typing.NewType("Step", int)
 NoiseDB = typing.NewType("NoiseDB", float)
 Power = typing.NewType("Power", float)
-NoiseMap = typing.NewType("NoiseMap", list)
 
 @dataclasses.dataclass
 class Noise:
@@ -26,7 +26,7 @@ class Motor:
     current_step: Step = None
     current_angle: Angle = None
     current_noise: NoiseDB = None
-    noise_map: NoiseMap = None
+    noise_map: typing.List[Noise] = None
 
 class dataclassJSONEncoder(json.JSONEncoder):
     def default(self, o):
@@ -36,7 +36,10 @@ class dataclassJSONEncoder(json.JSONEncoder):
 
 def connect_motor() -> Motor:
     for port_num in range(0,11):
-        port = '/dev/ttyACM' + str(port_num)
+        if os.name == 'nt':
+            port = '\\.\COM' + str(port_num)
+        else:
+            port = '/dev/ttyACM' + str(port_num)
         motor = Motor(
             full_step = 28800,
             port = port,
@@ -114,7 +117,7 @@ def step_motor(motor: Motor, step: Step) -> None:
     except:
         pass
 
-def rotate_to_angle(motor: Motor, target_angle: Angle = 0):
+def rotate_to_angle(motor: Motor, target_angle: Angle = 0) -> None:
     try:
         target_step = angle_to_step(angle=target_angle, full_step=motor.full_step)
         step_delta = target_step - motor.current_step
@@ -123,7 +126,7 @@ def rotate_to_angle(motor: Motor, target_angle: Angle = 0):
     except:
         pass
 
-def rotate_to_noise(motor: Motor, target_noise: Noise):
+def rotate_to_noise(motor: Motor, target_noise: Noise) -> None:
     target_angle = min(range(len(motor.noise_map)), key=lambda i: abs(motor.noise_map[i]["noise"] - target_noise))
     rotate_to_angle(motor=motor, target_angle=target_angle)
 
@@ -134,10 +137,10 @@ def calc_noise_level(ref_power: Power, current_power: Power) -> NoiseDB:
         noise = None
     return noise
 
-def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) -> NoiseMap:
+def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) -> typing.List[Noise]:
     rotate_to_angle(motor=motor)
     step = angle_to_step(angle=1, full_step=motor.full_step)
-    noise_map = NoiseMap()
+    noise_map = typing.List[Noise]
     for i in range(0, 360):
         current_power = powermeter.powermeter.read
         noise_map.append(Noise(
@@ -146,12 +149,14 @@ def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) 
             noise=calc_noise_level(ref_power=ref_power, current_power=current_power)
         ))
         step_motor(motor=motor, step=step)
+
+    noise_map = noise_map[:next((i for i, d in enumerate(noise_map[1:], start=1) if d['noise'] < noise_map[i - 1]['noise']), len(noise_map))]
     
     with open("calibration.json", "w") as file:
         json.dump(noise_map, file, cls=dataclassJSONEncoder, indent=4)
     return noise_map
 
-def get_noise_map() -> NoiseMap:
+def get_noise_map() -> typing.List[Noise]:
     with open("calibration.json", "r") as file:
-        data = NoiseMap(json.load(file))
-        return data
+        data = typing.List[Noise](json.load(file))
+    return data

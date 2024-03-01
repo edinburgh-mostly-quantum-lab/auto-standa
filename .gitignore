@@ -1,4 +1,6 @@
 .venv/
+.conda/
+.vscode/
 __pycache__/
 *.py[cod]
 data/

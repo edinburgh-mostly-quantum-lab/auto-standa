@@ -16,7 +16,7 @@ menu_dict = {
     "3": "Rotate to angle",
     "4": "Rotate to noise level",
     "5": "Return to zero",
-    "8": "Measure reference power",
+    "8": "Set reference power",
     "9": "Calibrate noise map",
     "R": "Refresh",
     "Q": "Quit"
@@ -27,6 +27,7 @@ def main() -> None:
     powermeter = connect_power_meter()
     while True:
         clear()
+        print("Faris' Automated RotatIng Standa (FARIS) Motor")
         print_motor_status(motor=motor)
         print_power_meter_status(powermeter=powermeter)
 
@@ -57,23 +58,28 @@ def main() -> None:
                     option = -1
                     break
                 try:
-                    step = int(user_input)
+                    step = float(user_input)
                 except:
                     print("Invalid input")
                 else:
                     if option == 1:
                         step = angle_to_step(angle=step, full_step=motor.full_step)
+                        step_motor(motor=motor, step=step)
+                    if option == 2:
+                        step_motor(motor=motor, step=step)
                     if option == 3:
                         rotate_to_angle(motor=motor, target_angle=step)
                     if option == 4:
                         rotate_to_noise(motor=motor, target_noise=step)
-                    # step_motor(motor=motor, step=step)
 
             if option == 5:
                 rotate_to_angle(motor=motor)
 
             if option == 8:
-                set_ref_power(powermeter=powermeter)
+                try:
+                    set_ref_power(powermeter=powermeter)
+                except:
+                    powermeter.ref_power = motor.noise_map[0]['power']
 
             if option == 9:
                 calibrate_noise_map(ref_power=powermeter.ref_power, motor=motor, powermeter=powermeter)
