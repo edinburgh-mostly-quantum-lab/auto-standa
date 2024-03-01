@@ -16,7 +16,7 @@ menu_dict = {
     "3": "Rotate to angle",
     "4": "Rotate to noise level",
     "5": "Return to zero",
-    "8": "Measure reference power",
+    "8": "Set reference power",
     "9": "Calibrate noise map",
     "R": "Refresh",
     "Q": "Quit"
@@ -79,7 +79,7 @@ def main() -> None:
                 try:
                     set_ref_power(powermeter=powermeter)
                 except:
-                    powermeter.ref_power = motor.noise_map[0].power
+                    powermeter.ref_power = motor.noise_map[0]['power']
 
             if option == 9:
                 calibrate_noise_map(ref_power=powermeter.ref_power, motor=motor, powermeter=powermeter)
