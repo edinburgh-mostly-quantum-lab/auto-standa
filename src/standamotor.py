@@ -37,7 +37,7 @@ class dataclassJSONEncoder(json.JSONEncoder):
 def connect_motor() -> Motor:
     for port_num in range(0,11):
         if os.name == 'nt':
-            port = '\\.\COM' + str(port_num)
+            port = r'\\.\COM' + str(port_num)
         else:
             port = '/dev/ttyACM' + str(port_num)
         motor = Motor(
@@ -158,5 +158,5 @@ def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) 
 
 def get_noise_map() -> typing.List[Noise]:
     with open("calibration.json", "r") as file:
-        data = typing.List[Noise](json.load(file))
+        data = list(json.load(file))
     return data
