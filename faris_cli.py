@@ -76,7 +76,10 @@ def main() -> None:
                 rotate_to_angle(motor=motor)
 
             if option == 8:
-                set_ref_power(powermeter=powermeter)
+                try:
+                    set_ref_power(powermeter=powermeter)
+                except:
+                    powermeter.ref_power = motor.noise_map[0].power
 
             if option == 9:
                 calibrate_noise_map(ref_power=powermeter.ref_power, motor=motor, powermeter=powermeter)
