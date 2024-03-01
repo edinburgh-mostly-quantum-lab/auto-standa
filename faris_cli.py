@@ -58,21 +58,22 @@ def main() -> None:
                     option = -1
                     break
                 try:
-                    step = int(user_input)
+                    step = float(user_input)
                 except:
                     print("Invalid input")
                 else:
                     if option == 1:
                         step = angle_to_step(angle=step, full_step=motor.full_step)
+                        step_motor(motor=motor, step=step)
+                    if option == 2:
+                        step_motor(motor=motor, step=step)
                     if option == 3:
-                        step = rotate_to_angle(motor=motor, target_angle=step)
+                        rotate_to_angle(motor=motor, target_angle=step)
                     if option == 4:
-                        step = rotate_to_noise(motor=motor, target_noise=step)
-                    step_motor(motor=motor, step=step)
+                        rotate_to_noise(motor=motor, target_noise=step)
 
             if option == 5:
-                step = rotate_to_angle(motor=motor)
-                step_motor(motor=motor, step=step)
+                rotate_to_angle(motor=motor)
 
             if option == 8:
                 set_ref_power(powermeter=powermeter)
