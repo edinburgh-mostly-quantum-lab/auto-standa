@@ -71,7 +71,8 @@ def main() -> None:
                     step_motor(motor=motor, step=step)
 
             if option == 5:
-                rotate_to_angle(motor=motor)
+                step = rotate_to_angle(motor=motor)
+                step_motor(motor=motor, step=step)
 
             if option == 8:
                 set_ref_power(powermeter=powermeter)
