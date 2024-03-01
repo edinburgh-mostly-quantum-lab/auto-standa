@@ -1,0 +1,3 @@
+#!/bin/bash
+
+${HOME}/.local/Faris\ Motor/.venv/bin/python ${HOME}/.local/Faris\ Motor/faris_cli.py
