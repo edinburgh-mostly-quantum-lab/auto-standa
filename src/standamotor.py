@@ -119,6 +119,7 @@ def step_motor(motor: Motor, step: Step) -> None:
         print("Error stepping motor: Unable to connect to device")
     else:
         motor.motor.command_movr(int(step), 0)
+        print("Rotating motor")
         motor.motor.command_wait_for_stop(refresh_interval_ms=10)
         motor.motor.close_device()
         get_motor_status(motor=motor)
