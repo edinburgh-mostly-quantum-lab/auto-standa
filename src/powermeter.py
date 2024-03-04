@@ -39,7 +39,7 @@ def print_power_meter_status(powermeter: PowerMeter) -> None:
         powermeter.current_power = powermeter.powermeter.read
         print("Power:", powermeter.current_power, "W")
     except:
-        pass
+        print("Error getting power meter status")
 
 def set_ref_power(powermeter: PowerMeter):
     powermeter.ref_power = Power(powermeter.powermeter.read)

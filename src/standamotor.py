@@ -51,10 +51,10 @@ def connect_motor() -> Motor:
             motor.motor.close_device()
         except:
             motor = Motor(
-            full_step = 28800,
-            port = None,
-            motor = None,
-        )
+                full_step = 28800,
+                port = None,
+                motor = None,
+            )
         else:
             motor.noise_map = get_noise_map()
             get_motor_status(motor=motor)
@@ -139,6 +139,7 @@ def calc_noise_level(ref_power: Power, current_power: Power) -> NoiseDB:
         noise = NoiseDB(-10 * math.log10(current_power/ref_power))
     except:
         noise = None
+        print("Error calculating noise, setting to None")
     return noise
 
 def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) -> typing.List[Noise]:

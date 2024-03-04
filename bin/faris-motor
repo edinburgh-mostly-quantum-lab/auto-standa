@@ -1,3 +1,5 @@
 #!/bin/bash
 
+cd ${HOME}/.local/Faris\ Motor/
 ${HOME}/.local/Faris\ Motor/.venv/bin/python ${HOME}/.local/Faris\ Motor/faris_cli.py
+cd -
