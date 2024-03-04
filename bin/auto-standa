@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cd ${HOME}/.local/auto-standa
+${HOME}/.local/auto-standa/.venv/bin/python ${HOME}/.local/auto-standa/auto-standa.py $1
+cd -
