@@ -129,7 +129,6 @@ def rotate_to_angle(motor: Motor, target_angle: Angle = 0) -> None:
     step_delta = (step_delta + motor.full_step/2) % motor.full_step - motor.full_step/2
     step_motor(motor=motor, step=step_delta)
 
-
 def rotate_to_noise(motor: Motor, target_noise: Noise) -> None:
     index = min(range(len(motor.noise_map)), key=lambda i: abs(motor.noise_map[i]["noise"] - target_noise))
     target_angle = motor.noise_map[index]["angle"]
