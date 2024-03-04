@@ -2,6 +2,8 @@ from ThorlabsPM100 import ThorlabsPM100, USBTMC
 import dataclasses
 import typing
 
+from standamotor import *
+
 Power = typing.NewType("Power", float)
 
 @dataclasses.dataclass
@@ -40,3 +42,22 @@ def print_power_meter_status(powermeter: PowerMeter) -> None:
 
 def set_ref_power(powermeter: PowerMeter):
     powermeter.ref_power = Power(powermeter.powermeter.read)
+
+def calibrate_noise_map(ref_power: Power, motor: Motor, powermeter: PowerMeter) -> typing.List[Noise]:
+    rotate_to_angle(motor=motor)
+    step = angle_to_step(angle=1, full_step=motor.full_step)
+    noise_map = typing.List[Noise]
+    for i in range(0, 360):
+        current_power = powermeter.powermeter.read
+        noise_map.append(Noise(
+            angle=i,
+            power=current_power,
+            noise=calc_noise_level(ref_power=ref_power, current_power=current_power)
+        ))
+        step_motor(motor=motor, step=step)
+
+    noise_map = noise_map[:next((i for i, d in enumerate(noise_map[1:], start=1) if d['noise'] < noise_map[i - 1]['noise']), len(noise_map))]
+    
+    with open("calibration.json", "w") as file:
+        json.dump(noise_map, file, cls=dataclassJSONEncoder, indent=4)
+    return noise_map
