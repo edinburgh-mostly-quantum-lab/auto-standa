@@ -74,9 +74,9 @@ def get_motor_status(motor: Motor) -> None:
         print("Error getting motor status: Unable to connect to device")
     else:
         position = motor.motor.get_status().CurPosition
-        if position < 0:
+        while position < 0:
             position = motor.full_step + position
-        if position > motor.full_step:
+        while position > motor.full_step:
             position = position - motor.full_step
         motor.current_step = position
         motor.current_angle = step_to_angle(step=motor.current_step, full_step=motor.full_step)
@@ -119,7 +119,6 @@ def step_motor(motor: Motor, step: Step) -> None:
         print("Error stepping motor: Unable to connect to device")
     else:
         motor.motor.command_movr(int(step), 0)
-        print("Rotating motor")
         motor.motor.command_wait_for_stop(refresh_interval_ms=10)
         motor.motor.close_device()
         get_motor_status(motor=motor)
