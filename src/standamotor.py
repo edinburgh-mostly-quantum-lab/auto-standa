@@ -56,7 +56,9 @@ def connect_motor() -> Motor:
             motor = None,
         )
         else:
+            motor.noise_map = get_noise_map()
             get_motor_status(motor=motor)
+            break
     return motor
 
 def angle_to_step(angle: Angle, full_step: Step) -> Step:
@@ -79,7 +81,7 @@ def get_motor_status(motor: Motor) -> None:
         motor.current_angle = step_to_angle(step=motor.current_step, full_step=motor.full_step)
         motor.motor.close_device()
     except:
-        pass
+        print("Error getting motor status")
 
 def set_zero_point(motor: Motor) -> None:
     try:
@@ -87,7 +89,7 @@ def set_zero_point(motor: Motor) -> None:
         motor.motor.command_zero()
         motor.motor.close_device()
     except:
-        pass
+        print("Error setting motor zero point")
     else:
         get_motor_status(motor=motor)
 
@@ -115,7 +117,7 @@ def step_motor(motor: Motor, step: Step) -> None:
         motor.motor.command_wait_for_stop(refresh_interval_ms=10)
         motor.motor.close_device()
     except:
-        pass
+        print("Error stepping motor")
     else:
         get_motor_status(motor=motor)
 
@@ -126,7 +128,7 @@ def rotate_to_angle(motor: Motor, target_angle: Angle = 0) -> None:
         step_delta = (step_delta + motor.full_step/2) % motor.full_step - motor.full_step/2
         step_motor(motor=motor, step=step_delta)
     except:
-        pass
+        print("Error rotating to specified angle")
 
 def rotate_to_noise(motor: Motor, target_noise: Noise) -> None:
     target_angle = min(range(len(motor.noise_map)), key=lambda i: abs(motor.noise_map[i]["noise"] - target_noise))
