@@ -56,7 +56,7 @@ def connect_motor() -> Motor:
             motor = None,
         )
         else:
-            break
+            get_motor_status(motor=motor)
     return motor
 
 def angle_to_step(angle: Angle, full_step: Step) -> Step:
@@ -86,12 +86,12 @@ def set_zero_point(motor: Motor) -> None:
         motor.motor.open_device()
         motor.motor.command_zero()
         motor.motor.close_device()
-        get_motor_status(motor=motor)
     except:
         pass
+    else:
+        get_motor_status(motor=motor)
 
 def print_motor_status(motor: Motor) -> None:
-    get_motor_status(motor=motor)
     if motor.current_step == motor.full_step:
             set_zero_point(motor=motor)
     if motor.port:
@@ -116,6 +116,8 @@ def step_motor(motor: Motor, step: Step) -> None:
         motor.motor.close_device()
     except:
         pass
+    else:
+        get_motor_status(motor=motor)
 
 def rotate_to_angle(motor: Motor, target_angle: Angle = 0) -> None:
     try:
