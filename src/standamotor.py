@@ -47,8 +47,6 @@ def connect_motor() -> Motor:
         )
         try:
             motor.motor.open_device()
-            motor.motor.get_status()
-            motor.motor.close_device()
         except:
             motor = Motor(
                 full_step = 28800,
@@ -56,6 +54,8 @@ def connect_motor() -> Motor:
                 motor = None,
             )
         else:
+            motor.motor.get_status()
+            motor.motor.close_device()
             motor.noise_map = get_noise_map()
             get_motor_status(motor=motor)
             break
@@ -72,6 +72,9 @@ def step_to_angle(step: Step, full_step: Step) -> Angle:
 def get_motor_status(motor: Motor) -> None:
     try:
         motor.motor.open_device()
+    except:
+        print("Error getting motor status: Unable to connect to device")
+    else:
         position = motor.motor.get_status().CurPosition
         if position < 0:
             position = motor.full_step + position
@@ -80,17 +83,18 @@ def get_motor_status(motor: Motor) -> None:
         motor.current_step = position
         motor.current_angle = step_to_angle(step=motor.current_step, full_step=motor.full_step)
         motor.motor.close_device()
-    except:
-        print("Error getting motor status")
+        if motor.noise_map != None:
+            index = min(range(len(motor.noise_map)), key=lambda i: abs(motor.noise_map[i]["angle"] - motor.current_angle))
+            motor.current_noise = motor.noise_map[index]["noise"]
 
 def set_zero_point(motor: Motor) -> None:
     try:
         motor.motor.open_device()
+    except:
+        print("Error setting motor zero point: Unable to connect to device")
+    else:
         motor.motor.command_zero()
         motor.motor.close_device()
-    except:
-        print("Error setting motor zero point")
-    else:
         get_motor_status(motor=motor)
 
 def print_motor_status(motor: Motor) -> None:
@@ -113,25 +117,24 @@ def print_motor_status(motor: Motor) -> None:
 def step_motor(motor: Motor, step: Step) -> None:
     try:
         motor.motor.open_device()
+    except:
+        print("Error stepping motor: Unable to connect to device")
+    else:
         motor.motor.command_movr(int(step), 0)
         motor.motor.command_wait_for_stop(refresh_interval_ms=10)
         motor.motor.close_device()
-    except:
-        print("Error stepping motor")
-    else:
         get_motor_status(motor=motor)
 
 def rotate_to_angle(motor: Motor, target_angle: Angle = 0) -> None:
-    try:
-        target_step = angle_to_step(angle=target_angle, full_step=motor.full_step)
-        step_delta = target_step - motor.current_step
-        step_delta = (step_delta + motor.full_step/2) % motor.full_step - motor.full_step/2
-        step_motor(motor=motor, step=step_delta)
-    except:
-        print("Error rotating to specified angle")
+    target_step = angle_to_step(angle=target_angle, full_step=motor.full_step)
+    step_delta = target_step - motor.current_step
+    step_delta = (step_delta + motor.full_step/2) % motor.full_step - motor.full_step/2
+    step_motor(motor=motor, step=step_delta)
+
 
 def rotate_to_noise(motor: Motor, target_noise: Noise) -> None:
-    target_angle = min(range(len(motor.noise_map)), key=lambda i: abs(motor.noise_map[i]["noise"] - target_noise))
+    index = min(range(len(motor.noise_map)), key=lambda i: abs(motor.noise_map[i]["noise"] - target_noise))
+    target_angle = motor.noise_map[index]["angle"]
     rotate_to_angle(motor=motor, target_angle=target_angle)
 
 def calc_noise_level(ref_power: Power, current_power: Power) -> NoiseDB:

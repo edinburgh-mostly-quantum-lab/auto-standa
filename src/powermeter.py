@@ -30,16 +30,13 @@ def connect_power_meter() -> PowerMeter:
     return powermeter
 
 def print_power_meter_status(powermeter: PowerMeter) -> None:
-    try:
-        if powermeter.port:
-            print("Power meter connected at port:", powermeter.port)
-        else:
-            print("Power meter not found")
+    if powermeter.port:
+        print("Power meter connected at port:", powermeter.port)
         print("Reference power:", powermeter.ref_power, "W")
         powermeter.current_power = powermeter.powermeter.read
         print("Power:", powermeter.current_power, "W")
-    except:
-        print("Error getting power meter status")
+    else:
+        print("Power meter not found")
 
 def set_ref_power(powermeter: PowerMeter):
     powermeter.ref_power = Power(powermeter.powermeter.read)
