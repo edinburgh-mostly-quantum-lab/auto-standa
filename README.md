@@ -7,6 +7,7 @@ The command passes this argument to a python script, that attempts to rotate the
 ## EXAMPLE
 `auto-standa 5`\
 This will:
-- change directory ~/.local/auto-standa
+- change directory to `~/.local/auto-standa`
 - execute auto-standa.py using a python virtual environment found in this directory
 - the python script rotates the motor to 5 dB
+- changes back to previous directory
